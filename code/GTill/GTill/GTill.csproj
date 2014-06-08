@@ -1,0 +1,219 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{E36D24B4-3FB3-4337-8E19-3B08D6AC9089}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GTill</RootNamespace>
+    <AssemblyName>GTill</AssemblyName>
+    <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\..\..\Desktop\GTILL\TILL\</OutputPath>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\ProgramFiles\TILL\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ionic.Zip, Version=1.9.1.5, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Desktop\GTILL\TILL\Ionic.Zip.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Deployment" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BackupEngine.cs" />
+    <Compile Include="Cashup.cs" />
+    <Compile Include="DatabaseEngine\Converter.cs" />
+    <Compile Include="DatabaseEngine\FastIndex.cs" />
+    <Compile Include="ErrorHandler.cs" />
+    <Compile Include="frmAbout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAbout.Designer.cs">
+      <DependentUpon>frmAbout.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmAccSel.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmAddToOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmBackupDates.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmCategorySelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmConfig.Designer.cs">
+      <DependentUpon>frmConfig.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmDateInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmDiscountWarning.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmEmailInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmOfferSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPaymentInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmProcessingINGNG.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmReceiptDisplay.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmReceiptDisplay.Designer.cs">
+      <DependentUpon>frmReceiptDisplay.cs</DependentUpon>
+    </Compile>
+    <Compile Include="frmReceiveOnAccount.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmLookupTransactions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmMoneyInTill.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPasswordInput.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmPresetKeys.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmRefund.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSearchForItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSearchForItemV2.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmShutDownWait.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmSingleInputBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmStats.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frnBackup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="DatabaseEngine\HeaderData.cs" />
+    <Compile Include="ModernListBox.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Printer.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="frmAbout.resx">
+      <DependentUpon>frmAbout.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmConfig.resx">
+      <DependentUpon>frmConfig.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="frmReceiptDisplay.resx">
+      <DependentUpon>frmReceiptDisplay.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <None Include="app.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+    <None Include="Resources\EMAILS.DBF" />
+    <EmbeddedResource Include="Resources\TDATA.DBF" />
+    <EmbeddedResource Include="Resources\THDR.DBF" />
+    <EmbeddedResource Include="Resources\REPDATA.DBF" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+    </Compile>
+    <Compile Include="DatabaseEngine\Record.cs" />
+    <Compile Include="Settings.cs" />
+    <Compile Include="ShutdownCode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Statistics.cs" />
+    <Compile Include="DatabaseEngine\Table.cs" />
+    <Compile Include="TillEngine.cs" />
+    <Compile Include="TransactionView.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Ionic.Zip.dll" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+</Project>

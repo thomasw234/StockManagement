@@ -1,0 +1,108 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="GTill.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="sFontName" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Franklin Gothic Medium</Value>
+    </Setting>
+    <Setting Name="cFrmForeColour" Type="System.Drawing.Color" Scope="Application">
+      <Value Profile="(Default)">White</Value>
+    </Setting>
+    <Setting Name="sPrinterOutputPort" Type="System.String" Scope="User">
+      <Value Profile="(Default)">LPT1</Value>
+    </Setting>
+    <Setting Name="sRepDataLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">REPDATA.DBF</Value>
+    </Setting>
+    <Setting Name="sTDataLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">TDATA.DBF</Value>
+    </Setting>
+    <Setting Name="sTHdrLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">THDR.DBF</Value>
+    </Setting>
+    <Setting Name="sAccStatLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">ACCSTAT.DBF</Value>
+    </Setting>
+    <Setting Name="sBranchLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">BRANCH.DBF</Value>
+    </Setting>
+    <Setting Name="sCustRecLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CUSTREC.DBF</Value>
+    </Setting>
+    <Setting Name="sDetailsLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">DETAILS.DBF</Value>
+    </Setting>
+    <Setting Name="sPresetsLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">PRESETS.DBF</Value>
+    </Setting>
+    <Setting Name="sStaffLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">STAFF.DBF</Value>
+    </Setting>
+    <Setting Name="sStkLevelLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">STKLEVEL.DBF</Value>
+    </Setting>
+    <Setting Name="sTillCatLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">TILLCAT.DBF</Value>
+    </Setting>
+    <Setting Name="sStockLoc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">STOCK.DBF</Value>
+    </Setting>
+    <Setting Name="sINGNGDir" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">..\INGNG</Value>
+    </Setting>
+    <Setting Name="sOUTGNGDir" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">..\OUTGNG</Value>
+    </Setting>
+    <Setting Name="fMainScreenFontSize" Type="System.Single" Scope="User">
+      <Value Profile="(Default)">11</Value>
+    </Setting>
+    <Setting Name="bUseVirtualPrinter" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="bAutoLowercaseItems" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="nSpacesBetweenReceipts" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="nPriceLabelOffset" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">50</Value>
+    </Setting>
+    <Setting Name="bUseFloppyCashup" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="nPrinterCharWidth" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">40</Value>
+    </Setting>
+    <Setting Name="nLinesAfterReigsterReport" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">12</Value>
+    </Setting>
+    <Setting Name="bAutoSwapBootFiles" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="bUsingDosInsteadOfFloppy" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="sFloppyLocation" Type="System.String" Scope="User">
+      <Value Profile="(Default)">C:</Value>
+    </Setting>
+    <Setting Name="cFrmBackColour" Type="System.Drawing.Color" Scope="Application">
+      <Value Profile="(Default)">Black</Value>
+    </Setting>
+    <Setting Name="sBackupLocation" Type="System.String" Scope="User">
+      <Value Profile="(Default)">F:\till_backup</Value>
+    </Setting>
+    <Setting Name="bDoBackups" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="bAllowStats" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="sNoStatsAbout" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="bWaitForShutDown" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

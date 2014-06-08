@@ -1,0 +1,484 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>9.0.21022</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{EE43BA85-1C3B-47F7-A6EE-7F6835B520C3}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BackOffice</RootNamespace>
+    <AssemblyName>BackOffice</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <StartupObject>
+    </StartupObject>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>3.5</OldToolsVersion>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>..\..\..\..\..\Desktop\BackOffice\Backoff\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>x86</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Ionic.Zip, Version=1.9.1.5, Culture=neutral, PublicKeyToken=edbe51ad942a3f5c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\Desktop\Ionic.Zip.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Office.Interop.Outlook, Version=12.0.0.0, Culture=neutral, PublicKeyToken=71e9bce111e9429c" />
+    <Reference Include="System" />
+    <Reference Include="System.Core">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data.DataSetExtensions">
+      <RequiredTargetFramework>3.5</RequiredTargetFramework>
+    </Reference>
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Database Engine\FastIndex.cs" />
+    <Compile Include="FileManagementEngine.cs" />
+    <Compile Include="Forms\AddMultiBarcodeItem.cs" />
+    <Compile Include="Forms\frmCommissionPeriods.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDetailedItemEnquiry_exp.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOutOfStockReportOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmViewTillTransactions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="frmRestoreChoice.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Objects\Barcode.cs" />
+    <Compile Include="Database Engine\HeaderData.cs" />
+    <Compile Include="Database Engine\Record.cs" />
+    <Compile Include="Database Engine\Table.cs" />
+    <Compile Include="Forms\frmAddEditOffers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfSales.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmNewBatchEditOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Database Engine\Converter.cs" />
+    <Compile Include="Forms\frmAbout.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAccountEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddCommPerson.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddEditItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddEditShop.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddEditStaff.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddMultiItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddSupplier.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmAddTill.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmBatchAddItems.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmBatchEditItems.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmBatchEditOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmBatchOptions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCategoryEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCategorySelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCatGroupAddEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCollect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCreditCardEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmCustEmails.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmDetailedItemEnquiry.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmErrorCatcher.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmErrorCatcher.Designer.cs">
+      <DependentUpon>frmErrorCatcher.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmGetBarcode.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmGraphSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmInvoiceCosts.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfAccounts.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfCategoryGroups.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfCommissioners.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfItemTypes.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfOrders.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfShops.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfSuppliers.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfTills.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmListOfVATRates.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOffersReceptDesigner.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOffersReceptDesigner.Designer.cs">
+      <DependentUpon>frmOffersReceptDesigner.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmOrderSuggestions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOutstandingItemsSetup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmPayForCommissionItem.cs" />
+    <Compile Include="Forms\frmReceiveComissionItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmReportDates.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSearchForItemV2.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSearchForTransaction.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSearchForTransaction.Designer.cs">
+      <DependentUpon>frmSearchForTransaction.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\frmStockTransfer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmStockValSetup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSuppliersForItem.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmTillConnectionStatus.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmTillTransactions.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOrderSetup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmOrdersWithItemIn.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmPasswordEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmProgressBar.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmReceiveOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmReportSelect.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmReportViewer.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmRequisitionSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSalesReportOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSalesReportType.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSettings.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSingleInputBox.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmStockLevelReportConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmStockReportOrder.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmSubMenu.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmUpdater.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmVATRateEdit.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\frmWeeklySalesSummary.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Objects\Description.cs" />
+    <Compile Include="Objects\Item.cs" />
+    <Compile Include="Objects\Items\ChildItem.cs" />
+    <Compile Include="Objects\Items\DepartmentItem.cs" />
+    <Compile Include="Objects\Items\ItemStatistics.cs" />
+    <Compile Include="Objects\Items\MasterItem.cs" />
+    <Compile Include="Objects\Items\MultiBarcodeItem.cs" />
+    <Compile Include="Objects\Items\NonStockItem.cs" />
+    <Compile Include="Objects\Items\StockItem.cs" />
+    <Compile Include="Objects\VATRate.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Forms\ScalableForm.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ReportEngine.cs" />
+    <Compile Include="StockEngine.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Forms\frmErrorCatcher.resx">
+      <DependentUpon>frmErrorCatcher.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmOffersReceptDesigner.resx">
+      <DependentUpon>frmOffersReceptDesigner.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Forms\frmSearchForTransaction.resx">
+      <DependentUpon>frmSearchForTransaction.cs</DependentUpon>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="Resources\COMMISSI.DBF" />
+    <None Include="Resources\CUSTOMER.DBF" />
+    <None Include="Resources\DETAILS.DBF" />
+    <None Include="Resources\ORDER.DBF" />
+    <None Include="Resources\ORDERLIN.DBF" />
+    <None Include="Resources\SALESDAT.DBF" />
+    <None Include="Resources\SETTINGS.DBF" />
+    <None Include="Resources\STAFF.DBF" />
+    <None Include="Resources\STOCK.DBF" />
+    <None Include="Resources\STOCKSTA.DBF" />
+    <None Include="Resources\SUPPLIER.DBF" />
+    <None Include="Resources\TDETAILS.DBF" />
+    <None Include="Resources\TILLCAT.DBF" />
+    <None Include="Resources\TILLS.DBF" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\STKLEVEL.DBF" />
+    <None Include="Resources\TILLACCS.DBF" />
+    <None Include="Resources\TILLSTAF.DBF" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AboutPic.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\AboutPic2.jpg" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_1.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_2.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_3.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_4.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_5.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_6.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_7.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\image_8.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\EMAILS.DBF" />
+    <None Include="Resources\image_9.png" />
+    <None Include="Resources\NEWSUPPL.DBF" />
+    <None Include="Resources\OFFERS.DBF" />
+    <None Include="Resources\SERIALS.DBF" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\receiptSample.jpg" />
+    <None Include="Resources\SALESIND.DBF" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\cow.png">
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage12.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage13.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage14.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage16.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage17.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage18.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\rage15.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\aprilfirst.png" />
+    <None Include="Resources\COMMITEM.DBF" />
+    <None Include="Resources\COMMPPL.DBF" />
+    <None Include="Resources\STOCKLEN.DBF" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Exceptions\" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1 Client Profile</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <PropertyGroup>
+    <PreBuildEvent>
+    </PreBuildEvent>
+  </PropertyGroup>
+</Project>
