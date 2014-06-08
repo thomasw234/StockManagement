@@ -2533,6 +2533,8 @@ namespace TillEngine
         /// <summary>
         /// Fixes the floating point precision error that sometimes occurs. So 7.9999999999999 becomes 8.00
         /// Static so that the process using this function needn't have an instance of the TillEngine
+        /// 
+        /// 8/6/14 UPDATE: I want to pour hot solder on past me's eyes
         /// </summary>
         /// <param name="fOriginal">The potentially faulty floating point number</param>
         /// <returns>A number rounded to 2 d.p</returns>

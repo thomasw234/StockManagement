@@ -177,9 +177,9 @@ namespace GTill
                         fGross = (float)Convert.ToDecimal(sItemsToDisplay[i, 2]);
                         fNet = (float)Convert.ToDecimal(sItemsToDisplay[i, 1]);
                         fGross = tEngine.fFixFloatError(fGross);
-                        nTextWidth = WorkOutTextWidth(nQuantityOfItem.ToString() + " at " + TillEngine.TillEngine.FormatMoneyForDisplay(tEngine.fFixFloatError(fGross)));
+                        nTextWidth = WorkOutTextWidth(nQuantityOfItem.ToString() + " at " + TillEngine.TillEngine.FormatMoneyForDisplay(tEngine.fFixFloatError(fNet / nQuantityOfItem)));
                         nTextLeft = AlignPrice - nTextWidth;
-                        g.DrawString(nQuantityOfItem.ToString() + " at " + TillEngine.TillEngine.FormatMoneyForDisplay(tEngine.fFixFloatError(fGross)), this.Font, new SolidBrush(drawColour), new PointF((float)nTextLeft, (float)nCurrentTop));
+                        g.DrawString(nQuantityOfItem.ToString() + " at " + TillEngine.TillEngine.FormatMoneyForDisplay(tEngine.fFixFloatError(fNet / nQuantityOfItem)), this.Font, new SolidBrush(drawColour), new PointF((float)nTextLeft, (float)nCurrentTop));
                         nCurrentTop -= nFontHeight;
                         bItemMultipleQuantity = true;
                     }

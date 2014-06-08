@@ -485,7 +485,7 @@ namespace TillEngine
                 bDiscount = true;
             if (bMultipleQuantities)
             {
-                sQuantityLine = "QUANTITY : " + iItem.Quantity.ToString() + " @ " + FormatMoneyForDisplay(iItem.GrossAmount);
+                sQuantityLine = "QUANTITY : " + iItem.Quantity.ToString() + " @ " + FormatMoneyForDisplay(iItem.Amount / iItem.Quantity);
                 string sFormattedMoney = "";
                 if (!bDiscount)
                 {
@@ -542,7 +542,7 @@ namespace TillEngine
                 bDiscount = true;
             if (bMultipleQuantities)
             {
-                sQuantityLine = "QUANTITY : " + nQuantity.ToString() + " @ " + FormatMoneyForDisplay(fGrossPerItem);
+                sQuantityLine = "QUANTITY : " + nQuantity.ToString() + " @ " + FormatMoneyForDisplay(fPricePaid / nQuantity);
                 string sFormattedMoney = "";
                 if (!bDiscount)
                 {

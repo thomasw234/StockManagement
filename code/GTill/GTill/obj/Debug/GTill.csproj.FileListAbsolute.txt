@@ -54,3 +54,12 @@ C:\Users\Thomas\Documents\Visual Studio 2012\Projects\GTill\GTill\obj\Debug\GTil
 C:\Users\Thomas\Documents\Visual Studio 2012\Projects\GTill\GTill\obj\Debug\GTill.frmReceiptDisplay.resources
 C:\Users\Thomas\Documents\Visual Studio 2012\Projects\GTill\GTill\obj\Debug\GTill.Properties.Resources.resources
 C:\Users\Thomas\Documents\Visual Studio 2012\Projects\GTill\GTill\obj\Debug\GTill.csproj.GenerateResource.Cache
+C:\Users\Thomas\Documents\Desktop\GTILL\TILL\GTill.exe.config
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.exe
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.pdb
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.csprojResolveAssemblyReference.cache
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.frmAbout.resources
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.frmConfig.resources
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.frmReceiptDisplay.resources
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.Properties.Resources.resources
+C:\Users\Thomas\Documents\GitHub\StockManagement\code\GTill\GTill\obj\Debug\GTill.csproj.GenerateResource.Cache
