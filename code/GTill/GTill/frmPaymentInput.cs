@@ -514,6 +514,8 @@ namespace GTill
                 try
                 {
                     fAmountInput = TillEngine.TillEngine.fFormattedMoneyString(tbGetAmount.Text);
+                    if (fAmountInput > 99999)
+                        throw new Exception("Too much input!");
                 }
                 catch
                 {
