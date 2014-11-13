@@ -1,435 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using BackOffice.Database_Engine;
-using System.IO;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Printing;
-using System.Net;
 using System.Globalization;
-using BackOffice.Objects.Items;
+using System.IO;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Forms;
+using BackOffice.Database_Engine;
+using BackOffice.Properties;
+using Ionic.Zip;
 
 namespace BackOffice
 {
-    class Till
-    {
-        public int Number;
-        public string TillName;
-        public string[] ReceiptFooter;
-        public string FileLocation;
-        public string CollectionMap;
-        public string ShopCode;
-        public string CollectedMap;
-        public string LastCollection;
-
-        public Till(string[] sTillData)
-        {
-            Number = Convert.ToInt32(Math.Round(Convert.ToDecimal(sTillData[0])));
-            TillName = sTillData[1];
-            ReceiptFooter = new string[3];
-            ReceiptFooter[0] = sTillData[3];
-            ReceiptFooter[1] = sTillData[4];
-            ReceiptFooter[2] = sTillData[5];
-            FileLocation = sTillData[2];
-            CollectionMap = sTillData[8];
-            ShopCode = sTillData[7];
-            CollectedMap = sTillData[6];
-            LastCollection = sTillData[9];
-        }
-
-        public void GetSalesDataFromTill(string sSalesDate)
-        {
-            // Sales date in format DDMMYY
-            int nYear = Convert.ToInt32(sSalesDate[4].ToString() + sSalesDate[5].ToString());
-            int nMonth = Convert.ToInt32(sSalesDate[2].ToString() + sSalesDate[3].ToString());
-            int nDay = Convert.ToInt32(sSalesDate[0].ToString() + sSalesDate[1].ToString());
-            DateTime d = new DateTime(nYear, nMonth, nDay);
-            switch (d.DayOfWeek)
-            {
-                case DayOfWeek.Sunday:
-                    nDay = 1;
-                    break;
-                case DayOfWeek.Monday:
-                    nDay = 2;
-                    break;
-                case DayOfWeek.Tuesday:
-                    nDay = 3;
-                    break;
-                case DayOfWeek.Wednesday:
-                    nDay = 4;
-                    break;
-                case DayOfWeek.Thursday:
-                    nDay = 5;
-                    break;
-                case DayOfWeek.Friday:
-                    nDay = 6;
-                    break;
-                case DayOfWeek.Saturday:
-                    nDay = 7;
-                    break;
-            }
-            File.Copy(FileLocation + "\\OUTGNG\\REPDATA" + nDay.ToString() + ".DBF", "TILL" + Number.ToString() +  "\\INGNG\\" + "REPDATA" + nDay.ToString() + ".DBF", true);
-            File.Copy(FileLocation + "\\OUTGNG\\TDATA" + nDay.ToString() + ".DBF", "TILL" + Number.ToString() + "\\INGNG\\" + "TDATA" + nDay.ToString() + ".DBF", true);
-            File.Copy(FileLocation + "\\OUTGNG\\THDR" + nDay.ToString() + ".DBF", "TILL" + Number.ToString() + "\\INGNG\\" + "THDR" + nDay.ToString() + ".DBF", true);
-            MarkTillAsCollected(nDay, sSalesDate);
-        }
-
-        private void MarkTillAsCollected(int nDayOfWeek, string sSalesDate)
-        {
-            string sCollectionMap = "";
-            for (int i = 0; i < 7; i++)
-            {
-                if (i == nDayOfWeek - 2)
-                    sCollectionMap += "Y";
-                else
-                    sCollectionMap += CollectedMap[i];
-            }
-            CollectedMap = sCollectionMap;
-            LastCollection = sSalesDate;
-        }
-
-        public void SaveTillChanges(ref Table tTill)
-        {
-            string[] sTillData = new string[10];
-            sTillData[0] = Number.ToString();
-            sTillData[1] = TillName;
-            sTillData[2] = FileLocation;
-            sTillData[3] = ReceiptFooter[0];
-            sTillData[4] = ReceiptFooter[1];
-            sTillData[5] = ReceiptFooter[2];
-            sTillData[6] = CollectedMap;
-            sTillData[7] = ShopCode;
-            sTillData[8] = CollectionMap;
-            sTillData[9] = LastCollection;
-            int nRecNum = -1;
-            tTill.SearchForRecord(TillName, 1, ref nRecNum);
-            tTill.DeleteRecord(nRecNum);
-            tTill.AddRecord(sTillData);
-            tTill.SaveToFile("TILL.DBF");
-        }
-    }
-
-    public class Item
-    {
-        /// <summary>
-        /// The description of the item
-        /// </summary>
-        string sItemDesc;
-        /// <summary>
-        /// The item's barcode
-        /// </summary>
-        string sBarcode;
-        /// <summary>
-        /// The gross price of the item
-        /// </summary>
-        decimal fGrossAmnt;
-        /// <summary>
-        /// The final amount of the item
-        /// </summary>
-        decimal fFinalAmount;
-        /// <summary>
-        /// The category of V.A.T. that the item is in
-        /// </summary>
-        string sVATCategory;
-        /// <summary>
-        /// Whether or not this is a stock item
-        /// </summary>
-        bool bStockItem;
-        /// <summary>
-        /// The product category that the item's in (stock, department etc)
-        /// </summary>
-        int nCategory;
-        /// <summary>
-        /// The quantity of item
-        /// </summary>
-        decimal nQuantity;
-        /// <summary>
-        /// The category that the item is in (user defined categories)
-        /// </summary>
-        string sCategory;
-        /// <summary>
-        /// Whether or not the item is discontinued, NOT DISCOUNTED!!
-        /// </summary>
-        public bool bDiscontinued;
-        /// <summary>
-        /// Whether or not the record was found with the item's details
-        /// </summary>
-        bool bItemExists;
-        /// <summary>
-        /// The V.A.T. code of the item (I1, Z0 etc)
-        /// </summary>
-        string sVATCode;
-        /// <summary>
-        /// The current stock level of the item
-        /// </summary>
-        decimal nCurrentStockLevel;
-        /// <summary>
-        /// Whether or not the item's price has been discounted
-        /// </summary>
-        bool bDiscounted;
-        /// <summary>
-        /// If there is a parent item, then the barcode of it
-        /// </summary>
-        public string ParentBarcode;
-        /// <summary>
-        /// The code of the shop that the item's in
-        /// </summary>
-        public string ShopCode;
-
-        /// <summary>
-        /// Intilailises the item
-        /// </summary>
-        /// <param name="sRecordContents">The contents of the STOCK database record for this item</param>
-        public Item(string[] sRecordContents, string[] SSTCKRecord)
-        {
-            if (sRecordContents[0] == null)
-            {
-                bItemExists = false;
-            }
-            else
-            {
-                sBarcode = sRecordContents[0];
-                sItemDesc = sRecordContents[1];
-                nCategory = Convert.ToInt32(sRecordContents[5]);
-                fGrossAmnt = (decimal)Convert.ToDecimal(sRecordContents[2]);
-                fGrossAmnt = (decimal)Math.Round((decimal)fGrossAmnt, 2);
-                fFinalAmount = fGrossAmnt;
-                sVATCategory = sRecordContents[3];
-                sCategory = sRecordContents[4];
-                if (nCategory == 1 || nCategory == 5)
-                    bStockItem = true;
-                else
-                    bStockItem = false;
-                if (SSTCKRecord[36] == "")
-                    nCurrentStockLevel = 0;
-                else
-                    nCurrentStockLevel = Convert.ToDecimal(SSTCKRecord[36]);
-                if (sRecordContents[5].StartsWith("ZZ"))
-                    bDiscontinued = true;
-                else
-                    bDiscontinued = false;
-
-                bItemExists = true;
-                bDiscounted = false;
-                ParentBarcode = sRecordContents[7];
-                ShopCode = SSTCKRecord[35];
-            }
-
-
-        }
-
-        /// <summary>
-        /// The quantity of the item
-        /// </summary>
-        public decimal Quantity
-        {
-            get
-            {
-                return nQuantity;
-            }
-            set
-            {
-                nQuantity = value;
-            }
-        }
-
-        /// <summary>
-        /// The amount of the item
-        /// </summary>
-        public decimal Amount
-        {
-            get
-            {
-                return fFinalAmount;
-            }
-        }
-
-        /// <summary>
-        /// The gross amount (before discounts etc)
-        /// </summary>
-        public decimal GrossAmount
-        {
-            get
-            {
-                return fGrossAmnt;
-            }
-            set
-            {
-                fGrossAmnt = value;
-                fFinalAmount = fGrossAmnt;
-            }
-        }
-
-        /// <summary>
-        /// The barcode of the item
-        /// </summary>
-        public string Barcode
-        {
-            get
-            {
-                return sBarcode;
-            }
-        }
-
-        /// <summary>
-        /// Whether or not the item is stock
-        /// </summary>
-        public bool IsItemStock
-        {
-            get
-            {
-                return bStockItem;
-            }
-        }
-
-        /// <summary>
-        /// The V.A.T. category
-        /// </summary>
-        public string VATRate
-        {
-            get
-            {
-                return sVATCategory;
-            }
-        }
-
-        /// <summary>
-        /// The description of the item
-        /// </summary>
-        public string Description
-        {
-            get
-            {
-                return sItemDesc;
-            }
-            set
-            {
-                if (nCategory == 4)
-                    sItemDesc = value;
-            }
-        }
-
-        /*
-        public bool GetIsDiscontinued()
-        {
-            return bDiscontinued;
-        }*/
-
-        /// <summary>
-        /// The current stock level of the item
-        /// </summary>
-        public decimal StockLevel
-        {
-            get
-            {
-                if (nCurrentStockLevel == null)
-                    return 0;
-                else
-                    return nCurrentStockLevel;
-            }
-            set
-            {
-                nCurrentStockLevel = value;
-            }
-        }
-
-        /// <summary>
-        /// Set the price of the item
-        /// </summary>
-        /// <param name="fGrossAmount">The new price</param>
-        public void SetPrice(decimal fGrossAmount)
-        {
-            if (fGrossAmnt == 0)
-            {
-                if (nCategory == 2 || nCategory == 4)
-                {
-                    fGrossAmnt = fGrossAmount;
-                    fFinalAmount = fGrossAmnt;
-                }
-            }
-            else
-            {
-                fFinalAmount = fGrossAmount;
-            }
-        }
-
-        /// <summary>
-        /// Gets the category of the item
-        /// </summary>
-        public int ItemCategory
-        {
-            get
-            {
-                return nCategory;
-            }
-        }
-
-        /// <summary>
-        /// Discounts an amount from the price
-        /// </summary>
-        /// <param name="fAmount">The amount to discount</param>
-        public void DiscountAmountFromNet(decimal fAmount)
-        {
-            fFinalAmount -= fAmount;
-            bDiscounted = true;
-        }
-
-        /// <summary>
-        /// Whether or not the item has been discounted
-        /// </summary>
-        public bool Discounted
-        {
-            get
-            {
-                return bDiscounted;
-            }
-        }
-
-        public string CodeCategory
-        {
-            get
-            {
-                return sCategory;
-            }
-        }
-    }
-
     public class StockEngine : IDisposable
     {
-        Table tAccStat;
-        Table tEmails;
-        Table tCatGroupHeader;
-        Table tCatGroupData;
-        Table tCategory;
-        Table tCommissioners;
-        Table tCommItems;
-        Table tCustomer;
-        Table tMultiHeader;
-        Table tMultiData;
-        Table tOffers;
-        Table tOrder;
-        Table tOrderLine;
-        Table tOrderSuggestions;
-        Table tSalesData;
-        Table tSalesIndex;
-        Table tSerials;
-        Table tSettings;
-        Table tShop;
-        Table tStaff;
-        Table tStock;
-        Table tStockLength;
-        Table tStockStats;
-        Table tSupplier;
-        Table tSupplierIndex;
-        Table tTills;
-        Table tTotalSales;
-        Table tVATRates;
-
-        Till[] Till;
-
-        string sTDir = "";
+        private const char cReceiptBreaker = '-';
+        private Till[] Till;
+        private string[] lastMissingOrderLine = new string[0];
+        private int nLineLastPrinted = 7;
+        private int nPrinterPage = 1;
+        private int nPrinterWidth = 50;
+        private ReportType rCurrentlyPrinting;
+        private string sLastCatCode = "";
+        private string sReportTitle = "Un-named Report";
+        private string sTDir = "";
+        private Table tAccStat;
+        private Table tCatGroupData;
+        private Table tCatGroupHeader;
+        private Table tCategory;
+        private Table tCommItems;
+        private Table tCommissioners;
+        private Table tCustomer;
+        private Table tEmails;
+        private Table tMultiData;
+        private Table tMultiHeader;
+        private Table tOffers;
+        private Table tOrder;
+        private Table tOrderLine;
+        private Table tOrderSuggestions;
+        private Table tSalesData;
+        private Table tSalesIndex;
+        private Table tSerials;
+        private Table tSettings;
+        private Table tShop;
+        private Table tStaff;
+        private Table tStock;
+        private Table tStockLength;
+        private Table tStockStats;
+        private Table tSupplier;
+        private Table tSupplierIndex;
+        private Table tTills;
+        private Table tTotalSales;
+        private Table tVATRates;
 
         public StockEngine()
         {
@@ -440,6 +65,7 @@ namespace BackOffice
             Task.Run(() => { tStockStats.ProperLoad(); });
             Task.Run(() => { tStock.ProperLoad(); });
         }
+
         public StockEngine(string sTableDir)
         {
             sTDir = sTableDir + "\\";
@@ -449,13 +75,377 @@ namespace BackOffice
 
             LoadAllTables();
             SetupTills();
+        }
 
+        public string LastCheckedForUpdates
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("LastUpdate", "SETTINGNAM"))
+                    return tSettings.GetRecordFrom("LastUpdate", 0)[1];
+                else
+                    return "";
+            }
+            set
+            {
+                int nRecordNumber = 0;
+                if (tSettings.SearchForRecord("LastUpdate", 0, ref nRecordNumber))
+                {
+                    tSettings.EditRecordData(nRecordNumber, 1, value);
+                }
+                else
+                {
+                    string[] sToAdd = {"LastUpdate", value};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public string CompanyName
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("CompanyName", "SETTINGNAM"))
+                    return tSettings.GetRecordFrom("CompanyName", 0)[1];
+                else
+                    return "";
+            }
+            set
+            {
+                int nRecordNumber = 0;
+                if (tSettings.SearchForRecord("CompanyName", 0, ref nRecordNumber))
+                {
+                    tSettings.EditRecordData(nRecordNumber, 1, value);
+                }
+                else
+                {
+                    string[] sToAdd = {"CompanyName", value};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public int DiscountThresholdOnTill
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("DiscountThreshold", "SETTINGNAM"))
+                    return Convert.ToInt32(tSettings.GetRecordFrom("DiscountThreshold", 0)[1]);
+                else return 0;
+            }
+            set
+            {
+                int nRecordNumber = 0;
+                if (tSettings.SearchForRecord("DiscountThreshold", 0, ref nRecordNumber))
+                {
+                    tSettings.EditRecordData(nRecordNumber, 1, value.ToString());
+                }
+                else
+                {
+                    string[] sToAdd = {"DiscountThreshold", value.ToString()};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+                foreach (Till t in Till)
+                {
+                    GenerateSettingsForTill(t.Number);
+                }
+            }
+        }
+
+        public string VATNumber
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("VATNumber", "SETTINGNAM"))
+                    return tSettings.GetRecordFrom("VATNumber", 0)[1];
+                else
+                    return "";
+            }
+            set
+            {
+                int nRecordNumber = 0;
+                if (tSettings.SearchForRecord("VATNumber", 0, ref nRecordNumber))
+                    tSettings.EditRecordData(nRecordNumber, 1, value);
+                else
+                {
+                    string[] sToAdd = {"VATNumber", value};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public int NumberOfCards
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("NumberOfCards", "SETTINGNAM"))
+                    return Convert.ToInt32(tSettings.GetRecordFrom("NumberOfCards", 0)[1]);
+                else
+                    return 0;
+            }
+            set
+            {
+                int nRecordNumber = 0;
+                if (tSettings.SearchForRecord("NumberOfCards", 0, ref nRecordNumber))
+                    tSettings.EditRecordData(nRecordNumber, 1, value.ToString());
+                else
+                {
+                    string[] sToAdd = {"NumberOfCards", value.ToString()};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public int NumberOfVATRates
+        {
+            get { return tVATRates.NumberOfRecords; }
+        }
+
+        public string[,] VATRates
+        {
+            get
+            {
+                var sToReturn = new string[tVATRates.NumberOfRecords, 3];
+                for (int i = 0; i < tVATRates.NumberOfRecords; i++)
+                {
+                    sToReturn[i, 0] = tVATRates.GetRecordFrom(i)[0];
+                    sToReturn[i, 1] = tVATRates.GetRecordFrom(i)[1];
+                    sToReturn[i, 2] = tVATRates.GetRecordFrom(i)[2];
+                }
+                return sToReturn;
+            }
+        }
+
+        public int NumberOfShops
+        {
+            get { return tShop.NumberOfRecords; }
+        }
+
+        public int BottomBoundSize
+        {
+            get
+            {
+                int nRecNum = -1;
+                if (!tSettings.SearchForRecord("PRINTERBORDER", 0, ref nRecNum))
+                {
+                    string[] sToAdd = {"PRINTERBORDER", "20"};
+                    tSettings.AddRecord(sToAdd);
+                    tSettings.SaveToFile("SETTINGS.DBF");
+                }
+                return Convert.ToInt32(tSettings.GetRecordFrom("PRINTERBORDER", 0)[1]);
+            }
+            set
+            {
+                int nFieldNum = -1;
+                if (!tSettings.SearchForRecord("PRINTERBORDER", 0, ref nFieldNum))
+                {
+                    string[] sToAdd = {"PRINTERBORDER", "20"};
+                    tSettings.AddRecord(sToAdd);
+                    tSettings.SaveToFile("SETTINGS.DBF");
+                }
+                tSettings.SearchForRecord("PRINTERBORDER", 0, ref nFieldNum);
+                if (nFieldNum != -1)
+                {
+                    tSettings.EditRecordData(nFieldNum, 1, value.ToString());
+                    tSettings.SaveToFile("SETTINGS.DBF");
+                }
+            }
+        }
+
+        public float PrinterFontSize
+        {
+            get
+            {
+                int nLoc = -1;
+                tSettings.SearchForRecord("PFONTSIZE", 0, ref nLoc);
+                if (nLoc != -1)
+                {
+                    return (float) Convert.ToDecimal(tSettings.GetRecordFrom(nLoc)[1]);
+                }
+                else
+                {
+                    return 7.5f;
+                }
+            }
+            set
+            {
+                int nLoc = -1;
+                tSettings.SearchForRecord("PFONTSIZE", 0, ref nLoc);
+                if (nLoc != -1)
+                {
+                    tSettings.EditRecordData(nLoc, 1, value.ToString());
+                }
+                else
+                {
+                    string[] sToAdd = {"PFONTSIZE", value.ToString()};
+                    tSettings.AddRecord(sToAdd);
+                }
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public string[] ListOfCards
+        {
+            get
+            {
+                var sToReturn = new string[NumberOfCards];
+                for (int i = 0; i < sToReturn.Length; i++)
+                {
+                    string sCardNo = i.ToString();
+                    while (sCardNo.Length < 2)
+                        sCardNo = "0" + sCardNo;
+                    sToReturn[i] = tSettings.GetRecordFrom("CRD" + sCardNo, 0)[1];
+                }
+                return sToReturn;
+            }
+            set
+            {
+                int nCardNo = 0;
+                string sCardNumber = "CRD00";
+                int nRecNum = 0;
+                while (tSettings.SearchForRecord(sCardNumber, 0, ref nRecNum))
+                {
+                    tSettings.DeleteRecord(nRecNum);
+                    nCardNo++;
+                    sCardNumber = nCardNo.ToString();
+                    while (sCardNumber.Length < 2)
+                        sCardNumber = "0" + sCardNumber;
+                    sCardNumber = "CRD" + sCardNumber;
+                }
+                for (int i = 0; i < value.Length; i++)
+                {
+                    string sCRDNum = i.ToString();
+                    while (sCRDNum.Length < 2)
+                        sCRDNum = "0" + sCRDNum;
+                    sCRDNum = "CRD" + sCRDNum;
+                    string[] sToadd = {sCRDNum, value[i]};
+                    tSettings.AddRecord(sToadd);
+                }
+                tSettings.SearchForRecord("NumberOfCards", 0, ref nRecNum);
+                tSettings.EditRecordData(nRecNum, 1, value.Length.ToString());
+                tSettings.SaveToFile("SETTINGS.DBF");
+                for (int i = 0; i < Till.Length; i++)
+                {
+                    GenerateSettingsForTill(Till[i].Number);
+                }
+            }
+        }
+
+        public int LastOrderNumber
+        {
+            get
+            {
+                tOrder.SortTable();
+                return Convert.ToInt32(tOrder.GetRecordFrom(tOrder.NumberOfRecords - 1)[0]);
+            }
+        }
+
+        public string LastCategoryCode
+        {
+            get { return sLastCatCode; }
+            set { sLastCatCode = value; }
+        }
+
+        public string PrinterToUse
+        {
+            get
+            {
+                string[] setting = tSettings.GetRecordFrom("PRINTER", 0, true);
+                bool defaultExists = false;
+                if (setting.Length > 1)
+                {
+                    for (int i = 0; i < PrinterSettings.InstalledPrinters.Count; i++)
+                    {
+                        if (setting[1].Equals(PrinterSettings.InstalledPrinters[i]))
+                        {
+                            defaultExists = true;
+                            return setting[1];
+                        }
+                    }
+                }
+
+                if (!defaultExists)
+                {
+                    var pSettings = new PrinterSettings();
+                    for (int i = 0; i < PrinterSettings.InstalledPrinters.Count; i++)
+                    {
+                        pSettings.PrinterName = PrinterSettings.InstalledPrinters[i];
+                        if (pSettings.IsDefaultPrinter)
+                            return pSettings.PrinterName;
+                    }
+                }
+                return "Unknown";
+            }
+
+            set
+            {
+                int settingLoc = -1;
+                tSettings.SearchForRecord("PRINTER", 0, ref settingLoc);
+                if (settingLoc != -1)
+                {
+                    tSettings.DeleteRecord(settingLoc);
+                }
+
+                string[] newSetting = {"PRINTER", value};
+                tSettings.AddRecord(newSetting);
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public string GetLastVersion
+        {
+            get
+            {
+                if (tSettings.SearchForRecord("LASTVER", "SETTINGNAM"))
+                {
+                    return tSettings.GetRecordFrom("LASTVER", 0)[1];
+                }
+                else
+                {
+                    return "";
+                }
+            }
+            set
+            {
+                int nRecNum = 0;
+                tSettings.SearchForRecord("LASTVER", 0, ref nRecNum);
+                if (nRecNum != -1)
+                {
+                    tSettings.DeleteRecord(nRecNum);
+                }
+                string[] sToadd = {"LASTVER", value};
+                tSettings.AddRecord(sToadd);
+                tSettings.SaveToFile("SETTINGS.DBF");
+            }
+        }
+
+        public bool AllowDatabaseSaves
+        {
+            get
+            {
+                bool bAllowed = false;
+                if (tStock.PreventFromSaving)
+                    bAllowed = true;
+                if (tStockStats.PreventFromSaving)
+                    bAllowed = true;
+                return bAllowed;
+            }
+            set
+            {
+                tStock.PreventFromSaving = value;
+                tStockStats.PreventFromSaving = value;
+            }
         }
 
         public void CheckForUpdate(bool bForced)
         {
-            Random r = new Random(); // Used to prevent caching!
-            frmProgressBar fp = new frmProgressBar("Checking For Update");
+            var r = new Random(); // Used to prevent caching!
+            var fp = new frmProgressBar("Checking For Update");
             fp.pb.Maximum = 5;
             try
             {
@@ -464,12 +454,14 @@ namespace BackOffice
                 fp.Show();
                 if (!Directory.Exists("Update"))
                     Directory.CreateDirectory("Update");
-                WebClient w = new WebClient();
+                var w = new WebClient();
 
                 if (File.Exists("Update\\onlineBuildNum.txt"))
                     File.Delete("Update\\onlineBuildNum.txt");
-               
-                w.DownloadFile("http://www.thomaswormald.co.uk/backoffice/backoffice/updates/buildNum.txt?r=" + r.Next(0, 99999).ToString(), "Update\\onlineBuildNum.txt");
+
+                w.DownloadFile(
+                    "http://www.thomaswormald.co.uk/backoffice/backoffice/updates/buildNum.txt?r=" +
+                    r.Next(0, 99999).ToString(), "Update\\onlineBuildNum.txt");
                 fp.pb.Value = 1;
                 TextReader t = new StreamReader("Update\\onlineBuildNum.txt");
                 string sDownloaded = t.ReadLine();
@@ -487,9 +479,15 @@ namespace BackOffice
                     if (File.Exists("Update\\BackOfficeUpdate.exe"))
                         File.Delete("Update\\BackOfficeUpdate.exe");
                     fp.pb.Value = 4;
-                    w.DownloadFile("http://www.thomaswormald.co.uk/backoffice/backoffice/updates/BackOffice.exe?r=" + r.Next(0, 99999).ToString(), "Update\\BackOfficeUpdate.exe");
-                    w.DownloadFile("http://www.thomaswormald.co.uk/backoffice/backoffice/updates/changeLog.txt?r=" + r.Next(0, 999999), "Update\\changeLog.txt");
-                    w.DownloadFile("http://www.thomaswormald.co.uk/backoffice/backoffice/updates/GTill.exe?r=" + r.Next(0, 999999), "Update\\GTill.exe");
+                    w.DownloadFile(
+                        "http://www.thomaswormald.co.uk/backoffice/backoffice/updates/BackOffice.exe?r=" +
+                        r.Next(0, 99999).ToString(), "Update\\BackOfficeUpdate.exe");
+                    w.DownloadFile(
+                        "http://www.thomaswormald.co.uk/backoffice/backoffice/updates/changeLog.txt?r=" +
+                        r.Next(0, 999999), "Update\\changeLog.txt");
+                    w.DownloadFile(
+                        "http://www.thomaswormald.co.uk/backoffice/backoffice/updates/GTill.exe?r=" + r.Next(0, 999999),
+                        "Update\\GTill.exe");
                 }
                 fp.pb.Value = 5;
                 t.Close();
@@ -505,6 +503,7 @@ namespace BackOffice
                 fp.Close();
             }
         }
+
         public bool UpdateAvailable()
         {
             if (File.Exists("Update\\BackOfficeUpdate.exe"))
@@ -516,21 +515,22 @@ namespace BackOffice
                 return false;
             }
         }
+
         public void InstallUpdate()
         {
             UpdateTillSoftware();
-            System.Diagnostics.Process.Start("BackOfficeUpdater.exe");
-            System.Windows.Forms.Application.ExitThread();
-        
+            Process.Start("BackOfficeUpdater.exe");
+            Application.ExitThread();
         }
 
         private bool UpdateCheckNeeded()
         {
-            string lastChecked = this.LastCheckedForUpdates;
-            string todayDate = DateTime.Now.Date.Day.ToString() + "/" + DateTime.Now.Date.Month.ToString() + "/" + DateTime.Now.Year.ToString();
+            string lastChecked = LastCheckedForUpdates;
+            string todayDate = DateTime.Now.Date.Day.ToString() + "/" + DateTime.Now.Date.Month.ToString() + "/" +
+                               DateTime.Now.Year.ToString();
             if (lastChecked != todayDate)
             {
-                this.LastCheckedForUpdates = todayDate;
+                LastCheckedForUpdates = todayDate;
                 return true;
             }
             else
@@ -545,7 +545,7 @@ namespace BackOffice
             {
                 Directory.CreateDirectory("OffersReceipt");
             }
-            frmProgressBar fp = new frmProgressBar("Loading Tables");
+            var fp = new frmProgressBar("Loading Tables");
             fp.pb.Maximum = 26;
             fp.pb.Value = 0;
             //fp.Show();
@@ -556,8 +556,8 @@ namespace BackOffice
             tEmails = new Table(sTDir + "EMAILS.DBF");
             if (tEmails.ReturnFieldNames().Length < 7)
             {
-                FileStream fs = new FileStream(sTDir + "EMAILS.DBF", FileMode.OpenOrCreate);
-                fs.Write(Properties.Resources.EMAILS, 0, Properties.Resources.EMAILS.Length);
+                var fs = new FileStream(sTDir + "EMAILS.DBF", FileMode.OpenOrCreate);
+                fs.Write(Resources.EMAILS, 0, Resources.EMAILS.Length);
                 fs.Close();
 
                 tEmails = new Table(sTDir + "EMAILS.DBF");
@@ -574,31 +574,31 @@ namespace BackOffice
             fp.Text = "Loading Commission Data";
             if (!File.Exists(sTDir + "COMMPPL.DBF"))
             {
-                FileStream fs = new FileStream(sTDir + "COMMPPL.DBF", FileMode.OpenOrCreate);
-                fs.Write(Properties.Resources.COMMPPL, 0, Properties.Resources.COMMPPL.Length);
+                var fs = new FileStream(sTDir + "COMMPPL.DBF", FileMode.OpenOrCreate);
+                fs.Write(Resources.COMMPPL, 0, Resources.COMMPPL.Length);
                 fs.Close();
             }
             tCommissioners = new Table(sTDir + "COMMPPL.DBF");
             if (tCommissioners.ReturnFieldNames().Length != 2)
             {
-                FileStream fs = new FileStream(sTDir + "COMMPPL.DBF", FileMode.OpenOrCreate);
-                fs.Write(Properties.Resources.COMMPPL, 0, Properties.Resources.COMMPPL.Length);
+                var fs = new FileStream(sTDir + "COMMPPL.DBF", FileMode.OpenOrCreate);
+                fs.Write(Resources.COMMPPL, 0, Resources.COMMPPL.Length);
                 fs.Close();
                 tCommissioners = new Table(sTDir + "COMMPPL.DBF");
             }
             fp.pb.Value = 6;
             if (!File.Exists(sTDir + "COMMITEM.DBF"))
             {
-                FileStream fs = new FileStream(sTDir + "COMMITEM.DBF", FileMode.OpenOrCreate);
-                fs.Write(Properties.Resources.COMMITEM, 0, Properties.Resources.COMMITEM.Length);
+                var fs = new FileStream(sTDir + "COMMITEM.DBF", FileMode.OpenOrCreate);
+                fs.Write(Resources.COMMITEM, 0, Resources.COMMITEM.Length);
                 fs.Close();
                 tCommissioners = new Table(sTDir + "COMMITEM.DBF");
             }
             tCommItems = new Table(sTDir + "COMMITEM.DBF");
             if (tCommItems.ReturnFieldNames().Length != 11)
             {
-                FileStream fs = new FileStream(sTDir + "COMMITEM.DBF", FileMode.OpenOrCreate);
-                fs.Write(Properties.Resources.COMMITEM, 0, Properties.Resources.COMMITEM.Length);
+                var fs = new FileStream(sTDir + "COMMITEM.DBF", FileMode.OpenOrCreate);
+                fs.Write(Resources.COMMITEM, 0, Resources.COMMITEM.Length);
                 fs.Close();
                 tCommissioners = new Table(sTDir + "COMMITEM.DBF");
             }
@@ -648,16 +648,16 @@ namespace BackOffice
             fp.Text = "Loading Serials";
             if (!File.Exists(sTDir + "SERIALS.DBF"))
             {
-                FileStream s = new FileStream(sTDir + "SERIALS.DBF", FileMode.CreateNew);
-                s.Write(Properties.Resources.SERIALS, 0, Properties.Resources.SERIALS.Length);
+                var s = new FileStream(sTDir + "SERIALS.DBF", FileMode.CreateNew);
+                s.Write(Resources.SERIALS, 0, Resources.SERIALS.Length);
                 s.Close();
             }
             tSerials = new Table(sTDir + "SERIALS.DBF");
 
             if (!File.Exists(sTDir + "OFFERS.DBF"))
             {
-                FileStream s = new FileStream(sTDir + "OFFERS.DBF", FileMode.CreateNew);
-                s.Write(Properties.Resources.OFFERS, 0, Properties.Resources.OFFERS.Length);
+                var s = new FileStream(sTDir + "OFFERS.DBF", FileMode.CreateNew);
+                s.Write(Resources.OFFERS, 0, Resources.OFFERS.Length);
                 s.Close();
             }
             fp.Text = "Loading Offers";
@@ -666,8 +666,8 @@ namespace BackOffice
 
             if (!File.Exists(sTDir + "SALESIND.DBF") && sTDir == "")
             {
-                FileStream s = new FileStream(sTDir + "SALESIND.DBF", FileMode.CreateNew);
-                s.Write(Properties.Resources.SALESIND, 0, Properties.Resources.SALESIND.Length);
+                var s = new FileStream(sTDir + "SALESIND.DBF", FileMode.CreateNew);
+                s.Write(Resources.SALESIND, 0, Resources.SALESIND.Length);
                 s.Close();
                 BuildSalesIndex();
             }
@@ -678,19 +678,19 @@ namespace BackOffice
 
             if (!File.Exists(sTDir + "STOCKLEN.DBF"))
             {
-                FileStream s = new FileStream(sTDir + "STOCKLEN.DBF", FileMode.CreateNew);
-                s.Write(Properties.Resources.STOCKLEN, 0, Properties.Resources.STOCKLEN.Length);
+                var s = new FileStream(sTDir + "STOCKLEN.DBF", FileMode.CreateNew);
+                s.Write(Resources.STOCKLEN, 0, Resources.STOCKLEN.Length);
                 s.Close();
             }
-            
+
             fp.Text = "Loading Out Of Stock Data";
             tStockLength = new Table(sTDir + "STOCKLEN.DBF");
             fp.pb.Value = 26;
 
             if (tStockLength.ReturnFieldNames()[2].TrimEnd('\0') != "TOTALDAYS")
             {
-                FileStream s = new FileStream(sTDir + "STOCKLEN.DBF", FileMode.Create);
-                s.Write(Properties.Resources.STOCKLEN, 0, Properties.Resources.STOCKLEN.Length);
+                var s = new FileStream(sTDir + "STOCKLEN.DBF", FileMode.Create);
+                s.Write(Resources.STOCKLEN, 0, Resources.STOCKLEN.Length);
                 s.Close();
                 tStockLength = new Table(sTDir + "STOCKLEN.DBF");
             }
@@ -709,11 +709,11 @@ namespace BackOffice
 
 
         /// <summary>
-        /// Builds up the STOCKLEN.DBF database from new
+        ///     Builds up the STOCKLEN.DBF database from new
         /// </summary>
         public void BuildStockLengthDatabase()
         {
-            frmProgressBar fp = new frmProgressBar();
+            var fp = new frmProgressBar();
             fp.pb.Maximum = 366;
             fp.pb.Value = 0;
 
@@ -749,7 +749,7 @@ namespace BackOffice
                 // Hopefully this will work
                 FileManagementEngine.UncompressDirectory(folderFormat);
 
-                Table tArchivedStockSta = new Table(folderFormat + "\\STOCKSTA.DBF");
+                var tArchivedStockSta = new Table(folderFormat + "\\STOCKSTA.DBF");
                 tArchivedStockSta.indexingEnabled = false;
                 for (int i = 0; i < sBarcodes.Length; i++)
                 {
@@ -777,7 +777,7 @@ namespace BackOffice
                                 dtFrom += "0";
                             dtFrom += dtCurrent.Year.ToString()[2].ToString() + dtCurrent.Year.ToString()[3].ToString();
 
-                            string[] toAdd = { sBarcodes[i], sRecordContents[35], dtFrom, "0" };
+                            string[] toAdd = {sBarcodes[i], sRecordContents[35], dtFrom, "0"};
                             tStockLength.AddRecord(toAdd);
                         }
 
@@ -808,8 +808,6 @@ namespace BackOffice
             }
             fp.Close();
             tStockLength.SaveToFile("STOCKLEN.DBF");
-
-
         }
 
         private void SetupTills()
@@ -837,7 +835,7 @@ namespace BackOffice
                 tVATRates.DeleteRecord(0);
             for (int i = 0; i < sVATNames.Length; i++)
             {
-                string[] sToAdd = { sVATCodes[i], sVATNames[i], dVATRates[i].ToString() };
+                string[] sToAdd = {sVATCodes[i], sVATNames[i], dVATRates[i].ToString()};
                 tVATRates.AddRecord(sToAdd);
             }
             tVATRates.SaveToFile("VAT.DBF");
@@ -867,7 +865,7 @@ namespace BackOffice
             }
             else
             {
-                string[] sToAdd = { "NumberOfCards", sCardNames.Length.ToString() };
+                string[] sToAdd = {"NumberOfCards", sCardNames.Length.ToString()};
                 tSettings.AddRecord(sToAdd);
             }
             for (int i = 0; i < sCardNames.Length; i++)
@@ -876,149 +874,15 @@ namespace BackOffice
                 if (i < 10)
                     sCardNo += "0";
                 sCardNo += i.ToString();
-                string[] sToAdd = { sCardNo, sCardNames[i] };
+                string[] sToAdd = {sCardNo, sCardNames[i]};
                 tSettings.AddRecord(sToAdd);
             }
             tSettings.SaveToFile("SETTINGS.DBF");
         }
 
-        public string LastCheckedForUpdates
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("LastUpdate", "SETTINGNAM"))
-                    return tSettings.GetRecordFrom("LastUpdate", 0)[1];
-                else
-                    return "";
-            }
-            set
-            {
-                int nRecordNumber = 0;
-                if (tSettings.SearchForRecord("LastUpdate", 0, ref nRecordNumber))
-                {
-                    tSettings.EditRecordData(nRecordNumber, 1, value);
-                }
-                else
-                {
-                    string[] sToAdd = { "LastUpdate", value };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-
-
-        }
-
-        public string CompanyName
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("CompanyName", "SETTINGNAM"))
-                    return tSettings.GetRecordFrom("CompanyName", 0)[1];
-                else
-                    return "";
-            }
-            set
-            {
-                int nRecordNumber = 0;
-                if (tSettings.SearchForRecord("CompanyName", 0, ref nRecordNumber))
-                {
-                    tSettings.EditRecordData(nRecordNumber, 1, value);
-                }
-                else
-                {
-                    string[] sToAdd = { "CompanyName", value };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
-        public int DiscountThresholdOnTill
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("DiscountThreshold", "SETTINGNAM"))
-                    return Convert.ToInt32(tSettings.GetRecordFrom("DiscountThreshold", 0)[1]);
-                else return 0;
-            }
-            set
-            {
-                int nRecordNumber = 0;
-                if (tSettings.SearchForRecord("DiscountThreshold", 0, ref nRecordNumber))
-                {
-                    tSettings.EditRecordData(nRecordNumber, 1, value.ToString());
-                }
-                else
-                {
-                    string[] sToAdd = { "DiscountThreshold", value.ToString() };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-                foreach (Till t in Till)
-                {
-                    GenerateSettingsForTill(t.Number);
-                }
-            }
-        }
-
-        public string VATNumber
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("VATNumber", "SETTINGNAM"))
-                    return tSettings.GetRecordFrom("VATNumber", 0)[1];
-                else
-                    return "";
-            }
-            set
-            {
-                int nRecordNumber = 0;
-                if (tSettings.SearchForRecord("VATNumber", 0, ref nRecordNumber))
-                    tSettings.EditRecordData(nRecordNumber, 1, value);
-                else
-                {
-                    string[] sToAdd = { "VATNumber", value };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
-        public int NumberOfCards
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("NumberOfCards", "SETTINGNAM"))
-                    return Convert.ToInt32(tSettings.GetRecordFrom("NumberOfCards", 0)[1]);
-                else
-                    return 0;
-            }
-            set
-            {
-                int nRecordNumber = 0;
-                if (tSettings.SearchForRecord("NumberOfCards", 0, ref nRecordNumber))
-                    tSettings.EditRecordData(nRecordNumber, 1, value.ToString());
-                else
-                {
-                    string[] sToAdd = { "NumberOfCards", value.ToString() };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
-        public int NumberOfVATRates
-        {
-            get
-            {
-                return tVATRates.NumberOfRecords;
-            }
-        }
-
         public string[] GetShopAddress(string sCode)
         {
-            string[] sAddress = new string[4];
+            var sAddress = new string[4];
             sAddress[0] = tSettings.GetRecordFrom("CompanyName", 0, true)[1];
             for (int i = 1; i < sAddress.Length; i++)
             {
@@ -1041,28 +905,13 @@ namespace BackOffice
                     tSettings.EditRecordData(nRecordNum, 1, value[i]);
                 else
                 {
-                    string[] sToAdd = { "Address" + i.ToString(), value[i] };
+                    string[] sToAdd = {"Address" + i.ToString(), value[i]};
                     tSettings.AddRecord(sToAdd);
                 }
             }
             tSettings.SaveToFile("SETTINGS.DBF");
         }
-        
 
-        public string[,] VATRates
-        {
-            get
-            {
-                string[,] sToReturn = new string[tVATRates.NumberOfRecords, 3];
-                for (int i = 0; i < tVATRates.NumberOfRecords; i++)
-                {
-                    sToReturn[i, 0] = tVATRates.GetRecordFrom(i)[0];
-                    sToReturn[i, 1] = tVATRates.GetRecordFrom(i)[1];
-                    sToReturn[i, 2] = tVATRates.GetRecordFrom(i)[2];
-                }
-                return sToReturn;
-            }
-        }
 
         public int NumberOfTills(string sShopCode)
         {
@@ -1075,9 +924,14 @@ namespace BackOffice
             return nCount;
         }
 
-        public void AddTill(string sTillCode, string sTillName, string[] sReceiptMessage, string sLocation, string sCollectionMap, string sShopCode)
+        public void AddTill(string sTillCode, string sTillName, string[] sReceiptMessage, string sLocation,
+            string sCollectionMap, string sShopCode)
         {
-            string[] sToAdd = { sTillCode, sTillName, sLocation, sReceiptMessage[0], sReceiptMessage[1], sReceiptMessage[2], "NNNNNNN", sShopCode, sCollectionMap, GetDDMMYYDate() };
+            string[] sToAdd =
+            {
+                sTillCode, sTillName, sLocation, sReceiptMessage[0], sReceiptMessage[1],
+                sReceiptMessage[2], "NNNNNNN", sShopCode, sCollectionMap, GetDDMMYYDate()
+            };
             if (tTills.SearchForRecord(sTillCode, "NUMBER"))
                 EditTillData(sToAdd);
             else
@@ -1091,7 +945,7 @@ namespace BackOffice
 
         public void AddShop(string sShopCode, string sShopName, string[] sAddress)
         {
-            string[] sToAdd = { sShopCode, sShopName };
+            string[] sToAdd = {sShopCode, sShopName};
             int nRecNum = 0;
             if (tShop.SearchForRecord(sShopCode, 0, ref nRecNum))
             {
@@ -1110,7 +964,7 @@ namespace BackOffice
                 }
                 else
                 {
-                    string[] sAddToAdd = { sShopCode + "Address" + (i + 1).ToString(), sAddress[i] };
+                    string[] sAddToAdd = {sShopCode + "Address" + (i + 1).ToString(), sAddress[i]};
                     tSettings.AddRecord(sAddToAdd);
                 }
             }
@@ -1139,7 +993,7 @@ namespace BackOffice
 
         public string[] GetListOfTillCodes(string sShopCode)
         {
-            string[] sToReturn = new string[NumberOfTills(sShopCode)];
+            var sToReturn = new string[NumberOfTills(sShopCode)];
             int nSkipped = 0;
             for (int i = 0; i < sToReturn.Length; i++)
             {
@@ -1185,12 +1039,12 @@ namespace BackOffice
         public string[] GetListOfSuppliers()
         {
             int nDel = 0;
-            string[] sToReturn = new string[tSupplier.NumberOfRecords];
+            var sToReturn = new string[tSupplier.NumberOfRecords];
             for (int i = 0; i < tSupplier.NumberOfRecords; i++)
             {
                 if (tSupplier.GetRecordFrom(i)[15].ToUpper() != "YES")
                 {
-                    sToReturn[i-nDel] = tSupplier.GetRecordFrom(i)[0];
+                    sToReturn[i - nDel] = tSupplier.GetRecordFrom(i)[0];
                 }
                 else
                 {
@@ -1218,7 +1072,7 @@ namespace BackOffice
                     nToRemove++;
                 }
             }
-            string[] sToReturn = new string[sPossibleCategories.Length - nToRemove];
+            var sToReturn = new string[sPossibleCategories.Length - nToRemove];
             int nRemoved = 0;
             for (int i = 0; i < sPossibleCategories.Length; i++)
             {
@@ -1250,7 +1104,7 @@ namespace BackOffice
                 tShop.DeleteRecord(0);
             for (int i = 0; i < sShopNames.Length; i++)
             {
-                string[] sToAdd = { sShopNames[i], sShopCodes[i] };
+                string[] sToAdd = {sShopNames[i], sShopCodes[i]};
                 tShop.AddRecord(sToAdd);
             }
             tShop.SaveToFile("SHOP.DBF");
@@ -1258,7 +1112,7 @@ namespace BackOffice
 
         public string[] GetListOfShopCodes()
         {
-            string[] sCodes = new string[tShop.NumberOfRecords];
+            var sCodes = new string[tShop.NumberOfRecords];
             for (int i = 0; i < sCodes.Length; i++)
             {
                 sCodes[i] = tShop.GetRecordFrom(i)[0];
@@ -1275,14 +1129,6 @@ namespace BackOffice
             catch
             {
                 return "";
-            }
-        }
-
-        public int NumberOfShops
-        {
-            get
-            {
-                return tShop.NumberOfRecords;
             }
         }
 
@@ -1352,7 +1198,8 @@ namespace BackOffice
         public string[] CheckIfItemHasChildren(string sBarcode)
         {
             int nOfRecs = 0;
-            /*string[] sChildren =*/ return tStock.SearchAndGetAllMatchingRecords(7, sBarcode, ref nOfRecs, true, 0);
+            /*string[] sChildren =*/
+            return tStock.SearchAndGetAllMatchingRecords(7, sBarcode, ref nOfRecs, true, 0);
             /*string[] stoReturn = new string[nOfRecs];
             for (int i = 0; i < nOfRecs; i++)
             {
@@ -1378,7 +1225,7 @@ namespace BackOffice
                 string[,] sSearch = tStock.SearchAndGetAllMatchingRecords(4, sCategory, ref nOfResults);
                 int nMissed = 0;
                 int nToMiss = 0;
-                bool[] bMissOut = new bool[nOfResults];
+                var bMissOut = new bool[nOfResults];
                 for (int i = 0; i < bMissOut.Length; i++)
                     bMissOut[i] = false;
                 for (int i = 0; i < nOfResults; i++)
@@ -1391,7 +1238,7 @@ namespace BackOffice
                     }
                 }
 
-                string[] sResults = new string[nOfResults];
+                var sResults = new string[nOfResults];
                 for (int i = 0; i < nOfResults; i++)
                 {
                     sResults[i] = sSearch[i, 0];
@@ -1404,15 +1251,15 @@ namespace BackOffice
         {
             int nOfRecords = 0;
             string[,] sItems = tStock.SearchAndGetAllMatchingRecords(4, sCategory, ref nOfRecords, true);
-            Item[] iItems = new Item[nOfRecords];
-            string[] sStockStats = new string[41];
-            string[] sMainStock = new string[9];
+            var iItems = new Item[nOfRecords];
+            var sStockStats = new string[41];
+            var sMainStock = new string[9];
             for (int i = 0; i < nOfRecords; i++)
             {
-                int nRecNum = tStockStats.GetRecordNumberFromTwoFields(sItems[i,0], 0, sShopCode, 35);
+                int nRecNum = tStockStats.GetRecordNumberFromTwoFields(sItems[i, 0], 0, sShopCode, 35);
                 for (int x = 0; x < 9; x++)
                 {
-                    sMainStock[x] = sItems[i,x];
+                    sMainStock[x] = sItems[i, x];
                 }
                 sStockStats = tStockStats.GetRecordFrom(nRecNum);
                 iItems[i] = new Item(sMainStock, sStockStats);
@@ -1420,6 +1267,7 @@ namespace BackOffice
             }
             return iItems;
         }
+
         // Taken from GTill
         public decimal GetItemStockLevel(string sBarcode)
         {
@@ -1436,7 +1284,7 @@ namespace BackOffice
             int nYear = Convert.ToInt32(sSalesDate[4].ToString() + sSalesDate[5].ToString());
             int nMonth = Convert.ToInt32(sSalesDate[2].ToString() + sSalesDate[3].ToString());
             int nDay = Convert.ToInt32(sSalesDate[0].ToString() + sSalesDate[1].ToString());
-            DateTime d = new DateTime(nYear, nMonth, nDay);
+            var d = new DateTime(nYear, nMonth, nDay);
 
             switch (d.DayOfWeek)
             {
@@ -1467,23 +1315,24 @@ namespace BackOffice
 
         public bool CollectDataFromTills(string sSalesDate, bool bUpdateDaily)
         {
-
             if (DateTime.Now.DayOfWeek.Equals(DayOfWeek.Sunday))
             {
-                if (System.Windows.Forms.MessageBox.Show("Today is Sunday, skip collection and just shutdown till?", "Sunday", System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.Yes)
+                if (
+                    MessageBox.Show("Today is Sunday, skip collection and just shutdown till?", "Sunday",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
                     return true;
                 }
             }
-            frmProgressBar fp = new frmProgressBar("Collecting");
+            var fp = new frmProgressBar("Collecting");
             fp.Show();
             // sSalesDate in format DDMMYY
             bool bFinishedOK = true;
             bool bAllTillsCollected = true;
-            string[] sCodesOfItemsSold = new string[0];
-            decimal[] nQuantitiesOfItemsSold = new decimal[0];
-            decimal[] dGrossSalePrice = new decimal[0];
-            string[] sDepartmentCodes = new string[0];
+            var sCodesOfItemsSold = new string[0];
+            var nQuantitiesOfItemsSold = new decimal[0];
+            var dGrossSalePrice = new decimal[0];
+            var sDepartmentCodes = new string[0];
             // Get the items sold by downloading the tills' data
 
             EndOfPeriod(Period.Daily);
@@ -1507,34 +1356,39 @@ namespace BackOffice
                 {
                     if (t.CollectedMap[i] == 'N' && t.CollectionMap[i] == 'Y')
                     {
-                            switch (System.Windows.Forms.MessageBox.Show("Days before today still need to be collected! Will you be collecting these at a later time? If not, they will be marked as collected. Cancel will halt the collection process.", "Collection", System.Windows.Forms.MessageBoxButtons.YesNoCancel))
-                            {
-                                case System.Windows.Forms.DialogResult.No:
-                                    string sNewCollMap = "";
-                                    for (int z = 0; z < 7; z++)
-                                    {
-                                        if (z != i)
-                                            sNewCollMap += t.CollectedMap[z].ToString();
-                                        else
-                                            sNewCollMap += "Y";
-                                    }
-                                    t.CollectedMap = sNewCollMap;
-                                    break;
+                        switch (
+                            MessageBox.Show(
+                                "Days before today still need to be collected! Will you be collecting these at a later time? If not, they will be marked as collected. Cancel will halt the collection process.",
+                                "Collection", MessageBoxButtons.YesNoCancel))
+                        {
+                            case DialogResult.No:
+                                string sNewCollMap = "";
+                                for (int z = 0; z < 7; z++)
+                                {
+                                    if (z != i)
+                                        sNewCollMap += t.CollectedMap[z].ToString();
+                                    else
+                                        sNewCollMap += "Y";
+                                }
+                                t.CollectedMap = sNewCollMap;
+                                break;
 
-                                case System.Windows.Forms.DialogResult.Cancel:
-                                    return false;
-                                    break;
-
-                            }
-                        
+                            case DialogResult.Cancel:
+                                return false;
+                                break;
+                        }
                     }
                 }
                 t.SaveTillChanges(ref tTills);
-                
+
                 if (t.CollectedMap[dayOfWeek - 2] == 'Y')
                 {
                     bFinishedOK = false;
-                    if (System.Windows.Forms.MessageBox.Show("Till " + t.Number.ToString() + " has already has its data collected. Re-collect? This will affect weekly, monthly, yearly totals as they will be duplicated if it really has already been collected.", "Re-Collect?", System.Windows.Forms.MessageBoxButtons.YesNo) == System.Windows.Forms.DialogResult.No)
+                    if (
+                        MessageBox.Show(
+                            "Till " + t.Number.ToString() +
+                            " has already has its data collected. Re-collect? This will affect weekly, monthly, yearly totals as they will be duplicated if it really has already been collected.",
+                            "Re-Collect?", MessageBoxButtons.YesNo) == DialogResult.No)
                     {
                         continue;
                     }
@@ -1550,9 +1404,15 @@ namespace BackOffice
                     bAllTillsCollected = false;
                     continue;
                 }
-                Table tRepData = new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "REPDATA" + DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
-                Table tTData = new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "TDATA" + DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
-                Table tTHDR = new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "THDR" + DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
+                var tRepData =
+                    new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "REPDATA" +
+                              DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
+                var tTData =
+                    new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "TDATA" +
+                              DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
+                var tTHDR =
+                    new Table(sTDir + "TILL" + t.Number.ToString() + "\\INGNG\\" + "THDR" +
+                              DayNumberOfWeek(sSalesDate).ToString() + ".DBF");
                 if (tRepData.GetRecordFrom(0)[1].Replace("/", "").ToUpper() != sSalesDate)
                 {
                     bFinishedOK = false;
@@ -1587,7 +1447,8 @@ namespace BackOffice
                     if (bFound)
                     {
                         nQuantitiesOfItemsSold[nLocation] += Convert.ToDecimal(sTDataRecord[5]);
-                        dGrossSalePrice[nLocation] += (Convert.ToDecimal(sTDataRecord[6]) - Convert.ToDecimal(sTDataRecord[8]));
+                        dGrossSalePrice[nLocation] += (Convert.ToDecimal(sTDataRecord[6]) -
+                                                       Convert.ToDecimal(sTDataRecord[8]));
                     }
                     else
                     {
@@ -1597,7 +1458,11 @@ namespace BackOffice
                         Array.Resize<string>(ref sDepartmentCodes, sDepartmentCodes.Length + 1);
                         sCodesOfItemsSold[sCodesOfItemsSold.Length - 1] = sTDataRecord[3];
                         nQuantitiesOfItemsSold[nQuantitiesOfItemsSold.Length - 1] = Convert.ToDecimal(sTDataRecord[5]);
-                        dGrossSalePrice[dGrossSalePrice.Length - 1] = Math.Round(((Convert.ToDecimal(sTDataRecord[6]) / nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1]) - (Convert.ToDecimal(sTDataRecord[8]) / nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1])) * nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1], 2);
+                        dGrossSalePrice[dGrossSalePrice.Length - 1] =
+                            Math.Round(
+                                ((Convert.ToDecimal(sTDataRecord[6])/nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1]) -
+                                 (Convert.ToDecimal(sTDataRecord[8])/nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1]))*
+                                nQuantitiesOfItemsSold[dGrossSalePrice.Length - 1], 2);
                         sDepartmentCodes[sDepartmentCodes.Length - 1] = t.ShopCode;
                     }
                 }
@@ -1617,7 +1482,7 @@ namespace BackOffice
                         }
                     }
                     if (!bAlreadyExists)
-                    { 
+                    {
                         Array.Resize<string>(ref sCodesOfItemsSold, sCodesOfItemsSold.Length + 1);
                         Array.Resize<decimal>(ref nQuantitiesOfItemsSold, nQuantitiesOfItemsSold.Length + 1);
                         Array.Resize<decimal>(ref dGrossSalePrice, dGrossSalePrice.Length + 1);
@@ -1635,7 +1500,8 @@ namespace BackOffice
                 {
                     if (GetMainStockInfo(sCodesOfItemsSold[i])[5] == "5")
                     {
-                        nQuantitiesOfItemsSold[i] /= Convert.ToDecimal(GetItemStockStaRecord(sCodesOfItemsSold[i], GetTillShopCode(t.Number))[38]);
+                        nQuantitiesOfItemsSold[i] /=
+                            Convert.ToDecimal(GetItemStockStaRecord(sCodesOfItemsSold[i], GetTillShopCode(t.Number))[38]);
                         sCodesOfItemsSold[i] = GetMainStockInfo(sCodesOfItemsSold[i])[7];
                     }
                 }
@@ -1648,7 +1514,8 @@ namespace BackOffice
             bool bProcessedOK = true;
             for (int i = 0; i < sCodesOfItemsSold.Length; i++)
             {
-                bProcessedOK = ProcessSoldItem(sCodesOfItemsSold[i], nQuantitiesOfItemsSold[i], dGrossSalePrice[i], sDepartmentCodes[i], bUpdateDaily, sSalesDate);
+                bProcessedOK = ProcessSoldItem(sCodesOfItemsSold[i], nQuantitiesOfItemsSold[i], dGrossSalePrice[i],
+                    sDepartmentCodes[i], bUpdateDaily, sSalesDate);
                 if (!bProcessedOK)
                     bFinishedOK = false;
             }
@@ -1674,15 +1541,20 @@ namespace BackOffice
                         bAllCollected = false;
                         // Give a reason for not collecting!
                         TextWriter tw = new StreamWriter("collectionLog.txt", true);
-                        tw.WriteLine(DateTime.Now.ToString() + " - Not collecting as collection map for till" + i.ToString() + " is " + Till[i].CollectedMap + " and the collection map is " + Till[i].CollectionMap);
+                        tw.WriteLine(DateTime.Now.ToString() + " - Not collecting as collection map for till" +
+                                     i.ToString() + " is " + Till[i].CollectedMap + " and the collection map is " +
+                                     Till[i].CollectionMap);
                         tw.Close();
 
-                        System.Windows.Forms.MessageBox.Show("Not offering an end-of-week despite it being due. A log has been created with a reason (see Backoffice folder collectionLog.txt)");
+                        MessageBox.Show(
+                            "Not offering an end-of-week despite it being due. A log has been created with a reason (see Backoffice folder collectionLog.txt)");
                     }
                 }
                 if (bAllCollected)
                 {
-                    if (System.Windows.Forms.MessageBox.Show("Would you like to do an end-of-week?", "End of week?", System.Windows.Forms.MessageBoxButtons.YesNo) == System.Windows.Forms.DialogResult.Yes)
+                    if (
+                        MessageBox.Show("Would you like to do an end-of-week?", "End of week?", MessageBoxButtons.YesNo) ==
+                        DialogResult.Yes)
                     {
                         EndOfPeriod(Period.Weekly);
                     }
@@ -1691,19 +1563,24 @@ namespace BackOffice
             int dDay = Convert.ToInt32(sSalesDate[0].ToString() + sSalesDate[1].ToString());
             int dMonth = Convert.ToInt32(sSalesDate[2].ToString() + sSalesDate[3].ToString());
             int dYear = Convert.ToInt32("20" + sSalesDate[4].ToString() + sSalesDate[5].ToString());
-            DateTime dtCollectionDate = new DateTime(dYear, dMonth, dDay);
+            var dtCollectionDate = new DateTime(dYear, dMonth, dDay);
             int nMonth = dtCollectionDate.Month;
             int nYear = dtCollectionDate.Year;
-            if (dtCollectionDate.AddDays(GetDaysUntilNextCollection(DayNumberOfWeek(sSalesDate), ref Till)).Month != nMonth)
+            if (dtCollectionDate.AddDays(GetDaysUntilNextCollection(DayNumberOfWeek(sSalesDate), ref Till)).Month !=
+                nMonth)
             {
-                if (System.Windows.Forms.MessageBox.Show("Would you like to do an end-of-month?", "End of month?", System.Windows.Forms.MessageBoxButtons.YesNo) == System.Windows.Forms.DialogResult.Yes)
+                if (
+                    MessageBox.Show("Would you like to do an end-of-month?", "End of month?", MessageBoxButtons.YesNo) ==
+                    DialogResult.Yes)
                 {
                     EndOfPeriod(Period.Monthly);
                 }
             }
-            if (dtCollectionDate.AddDays(GetDaysUntilNextCollection(DayNumberOfWeek(sSalesDate), ref Till)).Year != nYear)
+            if (dtCollectionDate.AddDays(GetDaysUntilNextCollection(DayNumberOfWeek(sSalesDate), ref Till)).Year !=
+                nYear)
             {
-                if (System.Windows.Forms.MessageBox.Show("Would you like to do an end-of-year?", "End of year?", System.Windows.Forms.MessageBoxButtons.YesNo) == System.Windows.Forms.DialogResult.Yes)
+                if (MessageBox.Show("Would you like to do an end-of-year?", "End of year?", MessageBoxButtons.YesNo) ==
+                    DialogResult.Yes)
                 {
                     EndOfPeriod(Period.Yearly);
                 }
@@ -1719,7 +1596,7 @@ namespace BackOffice
             for (int i = 0; i < tTills.Length; i++)
             {
                 int nDaysUntilNextColl = 1;
-                while (tTills[i].CollectionMap[(nDayOfWeek + 5 + nDaysUntilNextColl) % 7] == 'N')
+                while (tTills[i].CollectionMap[(nDayOfWeek + 5 + nDaysUntilNextColl)%7] == 'N')
                     nDaysUntilNextColl++;
                 if (nDaysUntilNextColl < nMin)
                     nMin = nDaysUntilNextColl;
@@ -1728,12 +1605,13 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Process a SINGLE commission item that has sold
+        ///     Process a SINGLE commission item that has sold
         /// </summary>
         /// <param name="sBarcode">The barcode</param>
         /// <param name="dSellingPrice">The price sold for</param>
         /// <param name="sCollectionDate">The date collected</param>
-        private void ProcessCommissionItem(string sBarcode, decimal dSellingPrice, string sCollectionDate, decimal dVAT, decimal dProfit)
+        private void ProcessCommissionItem(string sBarcode, decimal dSellingPrice, string sCollectionDate, decimal dVAT,
+            decimal dProfit)
         {
             // Get the supplier's code
             string sCommCode = tStock.GetRecordFrom(sBarcode, 0, true)[6];
@@ -1755,7 +1633,12 @@ namespace BackOffice
                 string[] sRec = sContents;
                 decimal dCommAmnt = Convert.ToDecimal(tStock.GetRecordFrom(sBarcode, 0, true)[8]);
                 // Delete the record and then add this to replace it:
-                string[] sToAdd = { sCommCode, sBarcode, sContents[2], dCommAmnt.ToString(), dSellingPrice.ToString(), "Y", sContents[6], sCollectionDate, dVAT.ToString(), FormatMoneyForDisplay(Convert.ToDecimal(sContents[9]) + dProfit), sContents[10] };
+                string[] sToAdd =
+                {
+                    sCommCode, sBarcode, sContents[2], dCommAmnt.ToString(), dSellingPrice.ToString(),
+                    "Y", sContents[6], sCollectionDate, dVAT.ToString(),
+                    FormatMoneyForDisplay(Convert.ToDecimal(sContents[9]) + dProfit), sContents[10]
+                };
                 tCommItems.DeleteRecord(nRecNum);
                 tCommItems.AddRecord(sToAdd);
             }
@@ -1763,7 +1646,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Marks a certain number of commission items as paid for, and adjusts the STOCKSTA profit record etc. accordingly
+        ///     Marks a certain number of commission items as paid for, and adjusts the STOCKSTA profit record etc. accordingly
         /// </summary>
         /// <param name="sBarcode">The barcode of the item to pay for</param>
         /// <param name="dQty">The quantity of the item to pay for</param>
@@ -1790,7 +1673,7 @@ namespace BackOffice
             }
 
             // There must be enough there to pay for
-            decimal dSingleAmount = Math.Round(dTotalAmount / dQty, 2);
+            decimal dSingleAmount = Math.Round(dTotalAmount/dQty, 2);
 
             dQtyStillToFind = dQty;
             for (int i = 0; i < tCommItems.NumberOfRecords && dQtyStillToFind > 0; i++)
@@ -1804,7 +1687,8 @@ namespace BackOffice
                         // Edit the commitem record
                         tCommItems.EditRecordData(i, 10, FormatMoneyForDisplay(dSingleAmount));
                         // And the profit record
-                        tCommItems.EditRecordData(i, 9, FormatMoneyForDisplay(Convert.ToDecimal(tCommItems.GetRecordFrom(i)[9]) - dDifference));
+                        tCommItems.EditRecordData(i, 9,
+                            FormatMoneyForDisplay(Convert.ToDecimal(tCommItems.GetRecordFrom(i)[9]) - dDifference));
 
                         // Edit the stocksta data
                         // Edit D,W,M,Y COGS
@@ -1832,11 +1716,13 @@ namespace BackOffice
             return true;
         }
 
-        private bool ProcessSoldItem(string sBarcode, decimal dQuantitySold, decimal dGrossAmount, string sShopCode, bool bDoDaily, string sCollectionDate)
+        private bool ProcessSoldItem(string sBarcode, decimal dQuantitySold, decimal dGrossAmount, string sShopCode,
+            bool bDoDaily, string sCollectionDate)
         {
             sBarcode = sBarcode.ToUpper();
             dQuantitySold = Math.Round(dQuantitySold, 3);
-            int nCodesRecordNum = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, tStockStats.FieldNumber("SHOPCODE"));
+            int nCodesRecordNum = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode,
+                tStockStats.FieldNumber("SHOPCODE"));
             if (nCodesRecordNum == -1)
             {
                 return false;
@@ -1847,7 +1733,7 @@ namespace BackOffice
                 if (sOldStockStaRecord[x] == "")
                     sOldStockStaRecord[x] = "0";
             }
-            string[] sNewStockStaRecord = new string[tStockStats.ReturnFieldNames().Length];
+            var sNewStockStaRecord = new string[tStockStats.ReturnFieldNames().Length];
             sNewStockStaRecord[0] = sBarcode;
             sNewStockStaRecord[1] = sOldStockStaRecord[1];
             decimal dCurrentAveDailySales = Convert.ToDecimal(sOldStockStaRecord[2]);
@@ -1859,9 +1745,9 @@ namespace BackOffice
             }
             else
             {
-                decimal dFraction = 2.0m / 20.0m;
-                decimal dFirstPart = dQuantitySold * dFraction;
-                decimal dSecondPart = dCurrentAveDailySales * (1.0m - dFraction);
+                decimal dFraction = 2.0m/20.0m;
+                decimal dFirstPart = dQuantitySold*dFraction;
+                decimal dSecondPart = dCurrentAveDailySales*(1.0m - dFraction);
                 decimal dAnswer = dFirstPart + dSecondPart;
                 string sToAdd = Math.Round(dAnswer, 3, MidpointRounding.AwayFromZero).ToString();
                 sNewStockStaRecord[2] = sToAdd;
@@ -1869,12 +1755,12 @@ namespace BackOffice
             sNewStockStaRecord[3] = sOldStockStaRecord[3];
             sNewStockStaRecord[4] = sOldStockStaRecord[4];
             // Calculate Net Price
-            decimal dVATRate = 1 + (GetVATRateFromCode(sBarcode) / 100);
-            decimal dNetPrice = dGrossAmount / dVATRate;
+            decimal dVATRate = 1 + (GetVATRateFromCode(sBarcode)/100);
+            decimal dNetPrice = dGrossAmount/dVATRate;
             decimal dTypeTwoCost = 0;
             if (GetMainStockInfo(sBarcode)[5] == "6")
             {
-                dNetPrice = (dGrossAmount - Convert.ToDecimal(sOldStockStaRecord[1])) / dVATRate;
+                dNetPrice = (dGrossAmount - Convert.ToDecimal(sOldStockStaRecord[1]))/dVATRate;
 
                 // Added more recently. The net price is gross - vat, but since vat is only paid on profit
                 // surely once the vat has been subtracted, the cost should be added again?
@@ -1885,10 +1771,10 @@ namespace BackOffice
             {
                 // Calculate the Daily COGS
                 decimal dMarginVal = Convert.ToDecimal(sOldStockStaRecord[39]);
-                decimal dProfitVal = dNetPrice * (dMarginVal / 100.0m);
+                decimal dProfitVal = dNetPrice*(dMarginVal/100.0m);
                 decimal dCostVal = (dNetPrice - dProfitVal);
                 sNewStockStaRecord[8] = (Math.Round(dCostVal, 2, MidpointRounding.AwayFromZero)).ToString();
-                dTypeTwoCost = Math.Round(dCostVal,2, MidpointRounding.AwayFromZero);
+                dTypeTwoCost = Math.Round(dCostVal, 2, MidpointRounding.AwayFromZero);
             }
             dNetPrice = Math.Round(dNetPrice, 2);
             if (bDoDaily)
@@ -1897,7 +1783,9 @@ namespace BackOffice
                 sNewStockStaRecord[6] = dGrossAmount.ToString();
                 sNewStockStaRecord[7] = dNetPrice.ToString();
                 if (GetMainStockInfo(sBarcode)[5] != "2")
-                    sNewStockStaRecord[8] = ((Convert.ToDecimal(sOldStockStaRecord[1]) * dQuantitySold) + Convert.ToDecimal(sOldStockStaRecord[8])).ToString();
+                    sNewStockStaRecord[8] =
+                        ((Convert.ToDecimal(sOldStockStaRecord[1])*dQuantitySold) +
+                         Convert.ToDecimal(sOldStockStaRecord[8])).ToString();
             }
             else
             {
@@ -1910,21 +1798,27 @@ namespace BackOffice
             sNewStockStaRecord[10] = (Convert.ToDecimal(sOldStockStaRecord[10]) + dGrossAmount).ToString();
             sNewStockStaRecord[11] = (Convert.ToDecimal(sOldStockStaRecord[11]) + dNetPrice).ToString();
             if (GetMainStockInfo(sBarcode)[5] != "2")
-                sNewStockStaRecord[12] = (Convert.ToDecimal(sOldStockStaRecord[12]) + (Convert.ToDecimal(sOldStockStaRecord[1]) * dQuantitySold)).ToString();
+                sNewStockStaRecord[12] =
+                    (Convert.ToDecimal(sOldStockStaRecord[12]) +
+                     (Convert.ToDecimal(sOldStockStaRecord[1])*dQuantitySold)).ToString();
             else
                 sNewStockStaRecord[12] = (Convert.ToDecimal(sOldStockStaRecord[12]) + dTypeTwoCost).ToString();
             sNewStockStaRecord[13] = (Convert.ToDecimal(sOldStockStaRecord[13]) + dQuantitySold).ToString();
             sNewStockStaRecord[14] = (Convert.ToDecimal(sOldStockStaRecord[14]) + dGrossAmount).ToString();
             sNewStockStaRecord[15] = (Convert.ToDecimal(sOldStockStaRecord[15]) + dNetPrice).ToString();
-           if (GetMainStockInfo(sBarcode)[5] != "2")
-                sNewStockStaRecord[16] = (Convert.ToDecimal(sOldStockStaRecord[16]) + (Convert.ToDecimal(sOldStockStaRecord[1]) * dQuantitySold)).ToString();
-           else
-               sNewStockStaRecord[16] = (Convert.ToDecimal(sOldStockStaRecord[16]) + dTypeTwoCost).ToString();
+            if (GetMainStockInfo(sBarcode)[5] != "2")
+                sNewStockStaRecord[16] =
+                    (Convert.ToDecimal(sOldStockStaRecord[16]) +
+                     (Convert.ToDecimal(sOldStockStaRecord[1])*dQuantitySold)).ToString();
+            else
+                sNewStockStaRecord[16] = (Convert.ToDecimal(sOldStockStaRecord[16]) + dTypeTwoCost).ToString();
             sNewStockStaRecord[17] = (Convert.ToDecimal(sOldStockStaRecord[17]) + dQuantitySold).ToString();
             sNewStockStaRecord[18] = (Convert.ToDecimal(sOldStockStaRecord[18]) + dGrossAmount).ToString();
             sNewStockStaRecord[19] = (Convert.ToDecimal(sOldStockStaRecord[19]) + dNetPrice).ToString();
             if (GetMainStockInfo(sBarcode)[5] != "2")
-                sNewStockStaRecord[20] = (Convert.ToDecimal(sOldStockStaRecord[20]) + (Convert.ToDecimal(sOldStockStaRecord[1]) * dQuantitySold)).ToString();
+                sNewStockStaRecord[20] =
+                    (Convert.ToDecimal(sOldStockStaRecord[20]) +
+                     (Convert.ToDecimal(sOldStockStaRecord[1])*dQuantitySold)).ToString();
             else
                 sNewStockStaRecord[20] = (Convert.ToDecimal(sOldStockStaRecord[20]) + dTypeTwoCost).ToString();
             sNewStockStaRecord[21] = sOldStockStaRecord[21];
@@ -1938,7 +1832,9 @@ namespace BackOffice
             sNewStockStaRecord[29] = (Convert.ToDecimal(sOldStockStaRecord[29]) + dQuantitySold).ToString();
             sNewStockStaRecord[30] = (Convert.ToDecimal(sOldStockStaRecord[30]) + dGrossAmount).ToString();
             sNewStockStaRecord[31] = (Convert.ToDecimal(sOldStockStaRecord[31]) + dNetPrice).ToString();
-            sNewStockStaRecord[32] = (Convert.ToDecimal(sOldStockStaRecord[32]) + (Convert.ToDecimal(sOldStockStaRecord[1]) * dQuantitySold)).ToString();
+            sNewStockStaRecord[32] =
+                (Convert.ToDecimal(sOldStockStaRecord[32]) + (Convert.ToDecimal(sOldStockStaRecord[1])*dQuantitySold))
+                    .ToString();
             sNewStockStaRecord[33] = sOldStockStaRecord[33];
             sNewStockStaRecord[34] = sOldStockStaRecord[34];
             sNewStockStaRecord[35] = sOldStockStaRecord[35];
@@ -1999,13 +1895,13 @@ namespace BackOffice
                         // Average Daily Sales
                         if (dCurrentAveDailySales == 0)
                         {
-                           sStockStaInfo[2] = dQuantitySold.ToString();
+                            sStockStaInfo[2] = dQuantitySold.ToString();
                         }
                         else
                         {
-                            decimal dFraction = 2.0m / 20.0m;
-                            decimal dFirstPart = dQuantitySold * dFraction;
-                            decimal dSecondPart = dCurrentAveDailySales * (1.0m - dFraction);
+                            decimal dFraction = 2.0m/20.0m;
+                            decimal dFirstPart = dQuantitySold*dFraction;
+                            decimal dSecondPart = dCurrentAveDailySales*(1.0m - dFraction);
                             decimal dAnswer = dFirstPart + dSecondPart;
                             string sToAdd = Math.Round(dAnswer, 3, MidpointRounding.AwayFromZero).ToString();
                             sStockStaInfo[2] = sToAdd;
@@ -2024,7 +1920,10 @@ namespace BackOffice
             {
                 string[] sOrderLineRec = tOrderLine.GetRecordFrom(i);
                 //if (tOrderLine.GetRecordFrom(i)[2] == sBarcode && tOrder.GetRecordFrom(tOrderLine.GetRecordFrom(i)[0], 0, true).Length > 1 && tOrder.GetRecordFrom(tOrderLine.GetRecordFrom(i)[0], 0, true)[6] == sShopCode && (Convert.ToDecimal(tOrderLine.GetRecordFrom(i)[3]) - Convert.ToDecimal(tOrderLine.GetRecordFrom(i)[4])) != 0)
-                if (String.Compare(sOrderLineRec[2], sBarcode, true) == 0 && tOrder.GetRecordFrom(sOrderLineRec[0], 0, true).Length > 1 && tOrder.GetRecordFrom(sOrderLineRec[0], 0, true)[6] == sShopCode && (Convert.ToDecimal(sOrderLineRec[3]) - Convert.ToDecimal(tOrderLine.GetRecordFrom(i)[4])) != 0)
+                if (String.Compare(sOrderLineRec[2], sBarcode, true) == 0 &&
+                    tOrder.GetRecordFrom(sOrderLineRec[0], 0, true).Length > 1 &&
+                    tOrder.GetRecordFrom(sOrderLineRec[0], 0, true)[6] == sShopCode &&
+                    (Convert.ToDecimal(sOrderLineRec[3]) - Convert.ToDecimal(tOrderLine.GetRecordFrom(i)[4])) != 0)
                 {
                     return tOrder.GetRecordFrom(tOrderLine.GetRecordFrom(i)[0], 0, true)[4];
                 }
@@ -2054,150 +1953,31 @@ namespace BackOffice
                 return;
             if (!File.Exists("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF"))
             {
-                FileStream fsWriter = new FileStream("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
-                fsWriter.Write(BackOffice.Properties.Resources.TILLSTKLEVEL, 0, BackOffice.Properties.Resources.TILLSTKLEVEL.Length);
+                var fsWriter = new FileStream("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
+                fsWriter.Write(Resources.TILLSTKLEVEL, 0, Resources.TILLSTKLEVEL.Length);
                 fsWriter.Close();
             }
-            Table tStockLvl = new Table(sTDir + "TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
+            var tStockLvl = new Table(sTDir + "TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
             string[] sStockStaData = GetItemStockStaRecord(sBarcode, GetTillShopCode(nTillNum));
             string[] sMainStockData = GetMainStockInfo(sBarcode);
-            string[] sToAddToStkLevel = {sBarcode, sStockStaData[tStockStats.FieldNumber("SHOPCODE")], 
-                                                sStockStaData[tStockStats.FieldNumber("QIS")], sMainStockData[tStock.FieldNumber("CATEGORY")], sStockStaData[3], GetItemDueDate(sBarcode, GetTillShopCode(nTill))};
+            string[] sToAddToStkLevel =
+            {
+                sBarcode, sStockStaData[tStockStats.FieldNumber("SHOPCODE")],
+                sStockStaData[tStockStats.FieldNumber("QIS")], sMainStockData[tStock.FieldNumber("CATEGORY")],
+                sStockStaData[3], GetItemDueDate(sBarcode, GetTillShopCode(nTill))
+            };
             tStockLvl.AddRecord(sToAddToStkLevel);
             tStockLvl.SaveToFile("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
         }
 
-        public enum ReportType { SalesReport, StockLevelReport, OrderInfo, StockValuationReport, ReprintReceipt, ComissionReport, OutStandingItems, CommissionSummaryReport, OutOfStockLengthReport };
-        ReportType rCurrentlyPrinting;
-        public enum SalesReportType { AllStock, CatAndStockTotals, StockTotals, CatTotalsAllShops, StockAllShops };
-        public enum ReportOrderedBy { CodeAlphabetical, DescAlphabetical, GrossSales, NetSales, Profit, ProfitPercent, QuantitySold, RRP, QIS };
-        public enum Period {Daily, Weekly, Monthly, Yearly, Other};
-        private class SaleReportItem : IComparable
-        {
-            public decimal dQuantitySold = 0;
-            public decimal dGrossSales = 0;
-            public decimal dNetSales = 0;
-            public decimal dStockLevel = 0;
-            public decimal dProfitAmount = 0;
-            public decimal dProfitPercent = 0;
-            public string sBarcode = "";
-            public string sDescription = "";
-            private decimal dCOGS = 0;
-            ReportOrderedBy Order;
-            public SaleReportItem(string Barcode, ref Table tStockStats, ref Table tMainStock, ref Table tCommission, Period pPeriod, ReportOrderedBy rOrder)
-            {
-                sBarcode = Barcode;
-                string sPeriodCode = "";
-                switch (pPeriod)
-                {
-                    case Period.Daily:
-                        sPeriodCode = "D";
-                        break;
-                    case Period.Weekly:
-                        sPeriodCode = "W";
-                        break;
-                    case Period.Monthly:
-                        sPeriodCode = "M";
-                        break;
-                    case Period.Yearly:
-                        sPeriodCode = "Y";
-                        break;
-                }
-                string[] sStockStatsRecord = tStockStats.GetRecordFrom(Barcode, 0, true);
-                string[] sMainStockRecord = tMainStock.GetRecordFrom(Barcode, 0, true);
-                dQuantitySold = Convert.ToDecimal(sStockStatsRecord[tStockStats.FieldNumber(sPeriodCode + "QSOLD")]);
-                dGrossSales = Convert.ToDecimal(sStockStatsRecord[tStockStats.FieldNumber(sPeriodCode + "GSALES")]);
-                dNetSales = Convert.ToDecimal(sStockStatsRecord[tStockStats.FieldNumber(sPeriodCode + "NSALES")]);
-                dStockLevel = Convert.ToDecimal(sStockStatsRecord[tStockStats.FieldNumber("QIS")]);
-                dCOGS = Convert.ToDecimal(sStockStatsRecord[tStockStats.FieldNumber(sPeriodCode + "COGS")]);
-                sDescription = sMainStockRecord[tMainStock.FieldNumber("DESCRIPTIO")];
-                dProfitAmount = dNetSales - dCOGS;
-                if (dCOGS == 0)
-                {
-                    dProfitPercent = 100;
-                }
-                else
-                {
-                    if (dNetSales == 0)
-                    {
-                        dProfitPercent = -100;
-                    }
-                    else
-                    {
-                        dProfitPercent = (100 / dNetSales) * dProfitAmount;
-                    }
-                }
-                Order = rOrder;
-            }
 
-            public int CompareTo(object obj)
-            {
-                SaleReportItem sOtherItem = (SaleReportItem)obj;
-                switch (Order)
-                {
-                    case ReportOrderedBy.CodeAlphabetical:
-                        return string.Compare(sBarcode, sOtherItem.sBarcode, true);
-                        break;
-                    case ReportOrderedBy.DescAlphabetical:
-                        return string.Compare(sDescription, sOtherItem.sDescription, true);
-                        break;
-                    case ReportOrderedBy.GrossSales:
-                        if (dGrossSales < sOtherItem.dGrossSales)
-                            return 1;
-                        else if (dGrossSales == sOtherItem.dGrossSales)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                    case ReportOrderedBy.NetSales:
-                        if (dNetSales < sOtherItem.dNetSales)
-                            return 1;
-                        else if (dNetSales == sOtherItem.dNetSales)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                    case ReportOrderedBy.Profit:
-                        if (dProfitAmount < sOtherItem.dProfitAmount)
-                            return 1;
-                        else if (dProfitAmount == sOtherItem.dProfitAmount)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                    case ReportOrderedBy.ProfitPercent:
-                        if (dProfitPercent < sOtherItem.dProfitPercent)
-                            return 1;
-                        else if (dProfitPercent == sOtherItem.dProfitPercent)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                    case ReportOrderedBy.QuantitySold:
-                        if (dQuantitySold < sOtherItem.dQuantitySold)
-                            return 1;
-                        else if (dQuantitySold == sOtherItem.dQuantitySold)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                }
-                return 0;
-            }
-        }
-        struct SalesItemContainer
-        {
-            public SaleReportItem[] sItems;
-            public string CatCode;
-            public string ShopCode;
-            public bool AnySoldFromCat;
-        }
-        public void SalesReportToFile(string sStartCat, string sEndCat, SalesReportType ReportType, Period SalesReportPeriod, ReportOrderedBy rOrder)
+        public void SalesReportToFile(string sStartCat, string sEndCat, SalesReportType ReportType,
+            Period SalesReportPeriod, ReportOrderedBy rOrder)
         {
             sStartCat = sStartCat.ToUpper();
             sEndCat = sEndCat.ToUpper();
-            SalesItemContainer[] sContainer = new SalesItemContainer[tShop.NumberOfRecords * tCategory.NumberOfRecords];
-            frmProgressBar frmProgress = new frmProgressBar("Generating Sales Report");
+            var sContainer = new SalesItemContainer[tShop.NumberOfRecords*tCategory.NumberOfRecords];
+            var frmProgress = new frmProgressBar("Generating Sales Report");
             frmProgress.Show();
             TextWriter tWriter = new StreamWriter("REPORT.TXT");
             tWriter.WriteLine("-------------------------");
@@ -2205,7 +1985,9 @@ namespace BackOffice
             {
                 case Period.Daily:
                     string sLastDate = GetLastCollectionDate();
-                    tWriter.WriteLine("Daily Sales Report for " + sLastDate[0].ToString()  + sLastDate[1].ToString() + "/" + sLastDate[2].ToString() + sLastDate[3].ToString() + "/" + sLastDate[4].ToString() + sLastDate[5].ToString());
+                    tWriter.WriteLine("Daily Sales Report for " + sLastDate[0].ToString() + sLastDate[1].ToString() +
+                                      "/" + sLastDate[2].ToString() + sLastDate[3].ToString() + "/" +
+                                      sLastDate[4].ToString() + sLastDate[5].ToString());
                     break;
                 case Period.Weekly:
                     string sWeekComm = GetWeekCommencingDate();
@@ -2221,13 +2003,17 @@ namespace BackOffice
                     break;
             }
             tWriter.WriteLine("-------------------------");
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
-            tWriter.WriteLine("Barcode       Description                    Stock     Quantity  Gross          Net         Profit    Profit(%)  Relative    Relative");
-            tWriter.WriteLine("                                             Level     Sold      Sales          Sales                            Profit (%)  Sales (%)");
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "Barcode       Description                    Stock     Quantity  Gross          Net         Profit    Profit(%)  Relative    Relative");
+            tWriter.WriteLine(
+                "                                             Level     Sold      Sales          Sales                            Profit (%)  Sales (%)");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------");
             bool bFoundCategory = false;
             bool bFinishedAllCats = false;
-            frmProgress.pb.Maximum = tShop.NumberOfRecords * tCategory.NumberOfRecords;
+            frmProgress.pb.Maximum = tShop.NumberOfRecords*tCategory.NumberOfRecords;
             for (int i = 0; i < tShop.NumberOfRecords; i++) // Each Shop
             {
                 string sShopStartLine = "Shop : " + tShop.GetRecordFrom(i)[0] + " - " + tShop.GetRecordFrom(i)[1];
@@ -2237,7 +2023,7 @@ namespace BackOffice
                 tWriter.WriteLine(sDashedLine);
                 tWriter.WriteLine(sShopStartLine);
                 tWriter.WriteLine(sDashedLine);
-                string[] sItemsSoldToday = this.GetListOfSoldBarcodes(tShop.GetRecordFrom(i)[0], SalesReportPeriod);
+                string[] sItemsSoldToday = GetListOfSoldBarcodes(tShop.GetRecordFrom(i)[0], SalesReportPeriod);
                 for (int q = 0; q < sItemsSoldToday.Length; q++)
                 {
                     sItemsSoldToday[q] = sItemsSoldToday[q].ToUpper();
@@ -2245,28 +2031,32 @@ namespace BackOffice
                 for (int p = 0; p < Till.Length; p++)
                 {
                     if (Till[p].LastCollection != GetLastCollectionDate())
-                        tWriter.WriteLine("Till " + Till[p].Number.ToString() + " (from " + GetShopNameFromCode(Till[p].ShopCode) + " shop) hasn't been collected so data from it is not displayed!");
+                        tWriter.WriteLine("Till " + Till[p].Number.ToString() + " (from " +
+                                          GetShopNameFromCode(Till[p].ShopCode) +
+                                          " shop) hasn't been collected so data from it is not displayed!");
                 }
                 // Find the shop totals
+
                 #region ShopTotals
+
                 decimal dShopTotalProfitAmount = 0;
                 decimal dShopTotalProfitPercent = 0;
                 decimal dShopTotalNetAmount = 0;
                 decimal dNumOfItemsSold = 0;
                 for (int x = 0; x < tCategory.NumberOfRecords; x++) // Each Category
                 {
-                    decimal dProgress = (((tCategory.NumberOfRecords * i) + x));
+                    decimal dProgress = (((tCategory.NumberOfRecords*i) + x));
                     frmProgress.pb.Value = Convert.ToInt32(dProgress);
                     bool bAnySoldFromCat = false;
                     string[] sCatRec = tCategory.GetRecordFrom(x);
-                    SaleReportItem[] sReportItems = new SaleReportItem[0];
+                    var sReportItems = new SaleReportItem[0];
                     if (!bFoundCategory && sCatRec[0] == sStartCat)
                         bFoundCategory = true;
                     if (bFoundCategory && !bFinishedAllCats)
                     {
                         int nOfRecords = 0;
                         // Get the barcodes of all the items in this category
-                        string[] sItems = tStock.SearchAndGetAllMatchingRecords(4, sCatRec[0], ref nOfRecords, true,0);
+                        string[] sItems = tStock.SearchAndGetAllMatchingRecords(4, sCatRec[0], ref nOfRecords, true, 0);
                         for (int y = 0; y < nOfRecords; y++)
                         {
                             // Make all the barcodes uppercase
@@ -2286,7 +2076,8 @@ namespace BackOffice
                                 string[] sStockStaInfo = tStockStats.GetRecordFrom(sItems[y], 0, true);
                                 string[] sMainStockInfo = tStock.GetRecordFrom(sItems[y], 0, true);
                                 Array.Resize<SaleReportItem>(ref sReportItems, sReportItems.Length + 1);
-                                sReportItems[sReportItems.Length - 1] = new SaleReportItem(sItems[y], ref tStockStats, ref tStock, ref tCommItems, SalesReportPeriod, rOrder);
+                                sReportItems[sReportItems.Length - 1] = new SaleReportItem(sItems[y], ref tStockStats,
+                                    ref tStock, ref tCommItems, SalesReportPeriod, rOrder);
                             }
                         }
 
@@ -2304,28 +2095,32 @@ namespace BackOffice
                     }
                     if (sCatRec[0] == sEndCat)
                         bFinishedAllCats = true;
-                    sContainer[(tShop.NumberOfRecords * i) + x] = new SalesItemContainer();
-                    sContainer[(tShop.NumberOfRecords * i) + x].CatCode = sCatRec[0];
-                    sContainer[(tShop.NumberOfRecords * i) + x].ShopCode = tShop.GetRecordFrom(i)[0];
-                    sContainer[(tShop.NumberOfRecords * i) + x].sItems = sReportItems;
-                    sContainer[(tShop.NumberOfRecords * i) + x].AnySoldFromCat = bAnySoldFromCat;
+                    sContainer[(tShop.NumberOfRecords*i) + x] = new SalesItemContainer();
+                    sContainer[(tShop.NumberOfRecords*i) + x].CatCode = sCatRec[0];
+                    sContainer[(tShop.NumberOfRecords*i) + x].ShopCode = tShop.GetRecordFrom(i)[0];
+                    sContainer[(tShop.NumberOfRecords*i) + x].sItems = sReportItems;
+                    sContainer[(tShop.NumberOfRecords*i) + x].AnySoldFromCat = bAnySoldFromCat;
                 }
+
                 #endregion
+
                 decimal dShopQtyTotal = 0;
                 decimal dShopGrossTotal = 0;
                 decimal dShopNetTotal = 0;
                 decimal dShopProfitTotal = 0;
                 int nOfCategories = 0;
                 bFinishedAllCats = false;
+
                 #region EachCat
+
                 for (int x = 0; x < tCategory.NumberOfRecords; x++) // Each Category
                 {
                     string[] sCatRec = tCategory.GetRecordFrom(x);
                     //decimal dProgress = (((tCategory.NumberOfRecords * i) + x) / 2) + (tCategory.NumberOfRecords / 2);
                     //frmProgress.pb.Value = Convert.ToInt32(dProgress);
-                    SaleReportItem[] sReportItems = new SaleReportItem[0];
+                    var sReportItems = new SaleReportItem[0];
                     bool bAnySoldFromCat = false;
-                    
+
                     for (int z = 0; z < sContainer.Length; z++)
                     {
                         if (sContainer[z].CatCode == sCatRec[0] && sContainer[z].ShopCode == tShop.GetRecordFrom(i)[0])
@@ -2334,7 +2129,7 @@ namespace BackOffice
                             bAnySoldFromCat = sContainer[z].AnySoldFromCat;
                         }
                     }
-                    
+
                     if (!bFoundCategory && sCatRec[0] == sStartCat)
                         bFoundCategory = true;
                     if (bFoundCategory && !bFinishedAllCats)
@@ -2410,13 +2205,13 @@ namespace BackOffice
                             // Work out relative amounts
                             decimal dProfitRelativePercent = 0;
                             if (dTotalProfitAmount != 0)
-                                dProfitRelativePercent = (100 / dTotalProfitAmount) * sReportItems[t].dProfitAmount;
+                                dProfitRelativePercent = (100/dTotalProfitAmount)*sReportItems[t].dProfitAmount;
                             string sProfitRelative = FormatMoneyForDisplay(dProfitRelativePercent);
                             while (sProfitRelative.Length < 10)
                                 sProfitRelative = " " + sProfitRelative;
                             decimal dAmountRelativePercent = 0;
                             if (dTotalNetAmount != 0)
-                                dAmountRelativePercent = (100 / dTotalNetAmount) * sReportItems[t].dNetSales;
+                                dAmountRelativePercent = (100/dTotalNetAmount)*sReportItems[t].dNetSales;
                             string sAmountRelative = FormatMoneyForDisplay(dAmountRelativePercent);
                             while (sAmountRelative.Length < 9)
                                 sAmountRelative = " " + sAmountRelative;
@@ -2430,13 +2225,15 @@ namespace BackOffice
                             dShopProfitTotal += sReportItems[t].dProfitAmount;
                             dProfitPercentTotal += sReportItems[t].dProfitPercent;
                             if (ReportType == SalesReportType.AllStock)
-                                tWriter.WriteLine(sBarcode + " " + sDescription + " " + sStockLevel + "  " + sQuantitySold + "   " + sGrossSales + " " + sNetSales + " " + sProfit + " " + sProfitPercent + "  " + sProfitRelative + "  " + sAmountRelative);
-                            
+                                tWriter.WriteLine(sBarcode + " " + sDescription + " " + sStockLevel + "  " +
+                                                  sQuantitySold + "   " + sGrossSales + " " + sNetSales + " " + sProfit +
+                                                  " " + sProfitPercent + "  " + sProfitRelative + "  " + sAmountRelative);
                         }
                         if (bAnySoldFromCat)
                         {
                             string sLineAdd = "";
-                            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
+                            tWriter.WriteLine(
+                                "-----------------------------------------------------------------------------------------------------------------------------");
                             string sEndOfCatLine = sCatRec[1];
                             if (ReportType == SalesReportType.AllStock)
                                 sEndOfCatLine = "Totals For " + sEndOfCatLine;
@@ -2461,26 +2258,27 @@ namespace BackOffice
                             // Average Profit
                             string sAverageProfit = "0.00";
                             if (dNetTotal != 0)
-                                sAverageProfit = FormatMoneyForDisplay((100 / dNetTotal) * dProfitTotal);
+                                sAverageProfit = FormatMoneyForDisplay((100/dNetTotal)*dProfitTotal);
                             while (sAverageProfit.Length < 9)
                                 sAverageProfit = " " + sAverageProfit;
                             sEndOfCatLine += " " + sAverageProfit;
                             // Relative Totals
                             string sProfitRelative = "";
                             if (dShopTotalProfitAmount != 0)
-                                sProfitRelative = FormatMoneyForDisplay((100 / dShopTotalProfitAmount) * dTotalProfitAmount);
+                                sProfitRelative = FormatMoneyForDisplay((100/dShopTotalProfitAmount)*dTotalProfitAmount);
                             else
                                 sProfitRelative = "0";
                             while (sProfitRelative.Length < 10)
                                 sProfitRelative = " " + sProfitRelative;
                             string sAmountRelative = "";
                             if (dShopTotalNetAmount != 0)
-                                sAmountRelative = FormatMoneyForDisplay((100 / dShopTotalNetAmount) * dTotalNetAmount);
+                                sAmountRelative = FormatMoneyForDisplay((100/dShopTotalNetAmount)*dTotalNetAmount);
                             while (sAmountRelative.Length < 9)
                                 sAmountRelative = " " + sAmountRelative;
                             sEndOfCatLine += "  " + sProfitRelative + "  " + sAmountRelative;
                             tWriter.WriteLine(sEndOfCatLine);
-                            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
+                            tWriter.WriteLine(
+                                "-----------------------------------------------------------------------------------------------------------------------------");
                             tWriter.WriteLine();
                         }
                         if (sCatRec[0] == sEndCat)
@@ -2491,9 +2289,13 @@ namespace BackOffice
                         continue;
                     }
                 }
+
                 #endregion
-                tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
-                string sEndOfShopLine = "Totals For Shop " + tShop.GetRecordFrom(i)[0] + " - " + tShop.GetRecordFrom(i)[1];
+
+                tWriter.WriteLine(
+                    "-----------------------------------------------------------------------------------------------------------------------------");
+                string sEndOfShopLine = "Totals For Shop " + tShop.GetRecordFrom(i)[0] + " - " +
+                                        tShop.GetRecordFrom(i)[1];
                 while (sEndOfShopLine.Length < 55)
                     sEndOfShopLine += " ";
                 while (sEndOfShopLine.Length + FormatMoneyForDisplay(dShopQtyTotal).Length < 65)
@@ -2510,9 +2312,10 @@ namespace BackOffice
                 sEndOfShopLine += FormatMoneyForDisplay(dShopProfitTotal);
                 if (dNumOfItemsSold > 0)
                 {
-                    while (sEndOfShopLine.Length + FormatMoneyForDisplay((100 / dShopNetTotal) * dShopProfitTotal).Length < 112)
+                    while (sEndOfShopLine.Length + FormatMoneyForDisplay((100/dShopNetTotal)*dShopProfitTotal).Length <
+                           112)
                         sEndOfShopLine += " ";
-                    sEndOfShopLine += FormatMoneyForDisplay((100 / dShopNetTotal) * dShopProfitTotal);
+                    sEndOfShopLine += FormatMoneyForDisplay((100/dShopNetTotal)*dShopProfitTotal);
                 }
                 else
                 {
@@ -2520,18 +2323,22 @@ namespace BackOffice
                         sEndOfShopLine += " ";
                 }
                 tWriter.WriteLine(sEndOfShopLine);
-                tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------");
+                tWriter.WriteLine(
+                    "-----------------------------------------------------------------------------------------------------------------------------");
                 tWriter.WriteLine();
             }
             tWriter.Close();
             frmProgress.Close();
         }
-        public void SalesReportToPrinter(string sStartCat, string sEndCat, SalesReportType SReportType, Period SalesReportPeriod, ReportOrderedBy rOrder)
+
+        public void SalesReportToPrinter(string sStartCat, string sEndCat, SalesReportType SReportType,
+            Period SalesReportPeriod, ReportOrderedBy rOrder)
         {
             nLineLastPrinted = 7;
             nPrinterPage = 1;
             string sDate = GetLastCollectionDate();
-            string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
+            string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() +
+                                sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
             switch (SalesReportPeriod)
             {
                 case Period.Daily:
@@ -2552,25 +2359,29 @@ namespace BackOffice
             }
             rCurrentlyPrinting = ReportType.SalesReport;
             SalesReportToFile(sStartCat, sEndCat, SReportType, SalesReportPeriod, rOrder);
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Daily Sales Report";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
             pPrinter.Print();
         }
-        public void SalesReportToSpreadsheet(string sStartCat, string sEndCat, SalesReportType ReportType, Period SalesReportPeriod, ReportOrderedBy rOrder)
+
+        public void SalesReportToSpreadsheet(string sStartCat, string sEndCat, SalesReportType ReportType,
+            Period SalesReportPeriod, ReportOrderedBy rOrder)
         {
-            SalesItemContainer[] sContainer = new SalesItemContainer[tShop.NumberOfRecords * tCategory.NumberOfRecords];
-            frmProgressBar frmProgress = new frmProgressBar("Generating Sales Spreadsheet");
+            var sContainer = new SalesItemContainer[tShop.NumberOfRecords*tCategory.NumberOfRecords];
+            var frmProgress = new frmProgressBar("Generating Sales Spreadsheet");
             frmProgress.Show();
             TextWriter tWriter = new StreamWriter("REPORT.CSV");
             switch (SalesReportPeriod)
             {
                 case Period.Daily:
                     string sLastDate = GetLastCollectionDate();
-                    tWriter.WriteLine("Daily Sales Report for " + sLastDate[0].ToString() + sLastDate[1].ToString() + "/" + sLastDate[2].ToString() + sLastDate[3].ToString() + "/" + sLastDate[4].ToString() + sLastDate[5].ToString());
+                    tWriter.WriteLine("Daily Sales Report for " + sLastDate[0].ToString() + sLastDate[1].ToString() +
+                                      "/" + sLastDate[2].ToString() + sLastDate[3].ToString() + "/" +
+                                      sLastDate[4].ToString() + sLastDate[5].ToString());
                     break;
                 case Period.Weekly:
                     string sWeekComm = GetWeekCommencingDate();
@@ -2584,33 +2395,39 @@ namespace BackOffice
                     string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                     tWriter.WriteLine("Yearly Sales Report for " + "20" + sYear);
                     break;
-            }tWriter.WriteLine("Barcode,Description,Stock Level,Quantity Sold,Gross Sales,Net Sales,Profit,Profit(%),Relative Profit(%),Relative Sales(%)");
+            }
+            tWriter.WriteLine(
+                "Barcode,Description,Stock Level,Quantity Sold,Gross Sales,Net Sales,Profit,Profit(%),Relative Profit(%),Relative Sales(%)");
             bool bFoundCategory = false;
             bool bFinishedAllCats = false;
-            frmProgress.pb.Maximum = tShop.NumberOfRecords * tCategory.NumberOfRecords;
+            frmProgress.pb.Maximum = tShop.NumberOfRecords*tCategory.NumberOfRecords;
             for (int i = 0; i < tShop.NumberOfRecords; i++) // Each Shop
             {
                 string sShopStartLine = "Shop : " + tShop.GetRecordFrom(i)[0] + " - " + tShop.GetRecordFrom(i)[1];
                 tWriter.WriteLine(sShopStartLine);
-                string[] sItemsSoldToday = this.GetListOfSoldBarcodes(tShop.GetRecordFrom(i)[0], SalesReportPeriod);
+                string[] sItemsSoldToday = GetListOfSoldBarcodes(tShop.GetRecordFrom(i)[0], SalesReportPeriod);
                 for (int p = 0; p < Till.Length; p++)
                 {
                     if (Till[p].LastCollection != GetLastCollectionDate())
-                        tWriter.WriteLine("Till " + Till[p].Number.ToString() + " (from " + GetShopNameFromCode(Till[p].ShopCode) + " shop) hasn't been collected so data from it is not displayed!");
+                        tWriter.WriteLine("Till " + Till[p].Number.ToString() + " (from " +
+                                          GetShopNameFromCode(Till[p].ShopCode) +
+                                          " shop) hasn't been collected so data from it is not displayed!");
                 }
                 // Find the shop totals
+
                 #region ShopTotals
+
                 decimal dShopTotalProfitAmount = 0;
                 decimal dShopTotalProfitPercent = 0;
                 decimal dShopTotalNetAmount = 0;
                 decimal dNumOfItemsSold = 0;
                 for (int x = 0; x < tCategory.NumberOfRecords; x++) // Each Category
                 {
-                    decimal dProgress = (((tCategory.NumberOfRecords * i) + x));
+                    decimal dProgress = (((tCategory.NumberOfRecords*i) + x));
                     frmProgress.pb.Value = Convert.ToInt32(dProgress);
                     bool bAnySoldFromCat = false;
                     string[] sCatRec = tCategory.GetRecordFrom(x);
-                    SaleReportItem[] sReportItems = new SaleReportItem[0];
+                    var sReportItems = new SaleReportItem[0];
                     if (!bFoundCategory && sCatRec[0] == sStartCat)
                         bFoundCategory = true;
                     if (bFoundCategory && !bFinishedAllCats)
@@ -2634,7 +2451,8 @@ namespace BackOffice
                                 string[] sStockStaInfo = tStockStats.GetRecordFrom(sItems[y], 0, true);
                                 string[] sMainStockInfo = tStock.GetRecordFrom(sItems[y], 0, true);
                                 Array.Resize<SaleReportItem>(ref sReportItems, sReportItems.Length + 1);
-                                sReportItems[sReportItems.Length - 1] = new SaleReportItem(sItems[y], ref tStockStats, ref tStock, ref tCommItems, SalesReportPeriod, rOrder);
+                                sReportItems[sReportItems.Length - 1] = new SaleReportItem(sItems[y], ref tStockStats,
+                                    ref tStock, ref tCommItems, SalesReportPeriod, rOrder);
                             }
                         }
 
@@ -2652,26 +2470,30 @@ namespace BackOffice
                     }
                     if (sCatRec[0] == sEndCat)
                         bFinishedAllCats = true;
-                    sContainer[(tShop.NumberOfRecords * i) + x] = new SalesItemContainer();
-                    sContainer[(tShop.NumberOfRecords * i) + x].CatCode = sCatRec[0];
-                    sContainer[(tShop.NumberOfRecords * i) + x].ShopCode = tShop.GetRecordFrom(i)[0];
-                    sContainer[(tShop.NumberOfRecords * i) + x].sItems = sReportItems;
-                    sContainer[(tShop.NumberOfRecords * i) + x].AnySoldFromCat = bAnySoldFromCat;
+                    sContainer[(tShop.NumberOfRecords*i) + x] = new SalesItemContainer();
+                    sContainer[(tShop.NumberOfRecords*i) + x].CatCode = sCatRec[0];
+                    sContainer[(tShop.NumberOfRecords*i) + x].ShopCode = tShop.GetRecordFrom(i)[0];
+                    sContainer[(tShop.NumberOfRecords*i) + x].sItems = sReportItems;
+                    sContainer[(tShop.NumberOfRecords*i) + x].AnySoldFromCat = bAnySoldFromCat;
                 }
+
                 #endregion
+
                 decimal dShopQtyTotal = 0;
                 decimal dShopGrossTotal = 0;
                 decimal dShopNetTotal = 0;
                 decimal dShopProfitTotal = 0;
                 int nOfCategories = 0;
                 bFinishedAllCats = false;
+
                 #region EachCat
+
                 for (int x = 0; x < tCategory.NumberOfRecords; x++) // Each Category
                 {
                     string[] sCatRec = tCategory.GetRecordFrom(x);
                     //decimal dProgress = (((tCategory.NumberOfRecords * i) + x) / 2) + (tCategory.NumberOfRecords / 2);
                     //frmProgress.pb.Value = Convert.ToInt32(dProgress);
-                    SaleReportItem[] sReportItems = new SaleReportItem[0];
+                    var sReportItems = new SaleReportItem[0];
                     bool bAnySoldFromCat = false;
 
                     for (int z = 0; z < sContainer.Length; z++)
@@ -2742,11 +2564,11 @@ namespace BackOffice
                             // Work out relative amounts
                             decimal dProfitRelativePercent = 0;
                             if (dTotalProfitAmount != 0)
-                                dProfitRelativePercent = (100 / dTotalProfitAmount) * sReportItems[t].dProfitAmount;
+                                dProfitRelativePercent = (100/dTotalProfitAmount)*sReportItems[t].dProfitAmount;
                             string sProfitRelative = FormatMoneyForDisplay(dProfitRelativePercent);
                             decimal dAmountRelativePercent = 0;
                             if (dTotalNetAmount != 0)
-                                dAmountRelativePercent = (100 / dTotalNetAmount) * sReportItems[t].dNetSales;
+                                dAmountRelativePercent = (100/dTotalNetAmount)*sReportItems[t].dNetSales;
                             string sAmountRelative = FormatMoneyForDisplay(dAmountRelativePercent);
                             dSoldTotal += sReportItems[t].dQuantitySold;
                             dGrossTotal += sReportItems[t].dGrossSales;
@@ -2758,8 +2580,9 @@ namespace BackOffice
                             dShopProfitTotal += sReportItems[t].dProfitAmount;
                             dProfitPercentTotal += sReportItems[t].dProfitPercent;
                             if (ReportType == SalesReportType.AllStock)
-                                tWriter.WriteLine(sBarcode + "," + sDescription + "," + sStockLevel + "," + sQuantitySold + "," + sGrossSales + "," + sNetSales + "," + sProfit + "," + sProfitPercent + "," + sProfitRelative + "," + sAmountRelative);
-
+                                tWriter.WriteLine(sBarcode + "," + sDescription + "," + sStockLevel + "," +
+                                                  sQuantitySold + "," + sGrossSales + "," + sNetSales + "," + sProfit +
+                                                  "," + sProfitPercent + "," + sProfitRelative + "," + sAmountRelative);
                         }
                         if (bAnySoldFromCat)
                         {
@@ -2778,11 +2601,12 @@ namespace BackOffice
                             // Average Profit
                             string sAverageProfit = "0.00";
                             if (dNetTotal != 0)
-                                sAverageProfit = FormatMoneyForDisplay((100 / dNetTotal) * dProfitTotal);
+                                sAverageProfit = FormatMoneyForDisplay((100/dNetTotal)*dProfitTotal);
                             sEndOfCatLine += "," + sAverageProfit;
                             // Relative Totals
-                            string sProfitRelative = FormatMoneyForDisplay((100 / dShopTotalProfitAmount) * dTotalProfitAmount);
-                            string sAmountRelative = FormatMoneyForDisplay((100 / dShopTotalNetAmount) * dTotalNetAmount);
+                            string sProfitRelative =
+                                FormatMoneyForDisplay((100/dShopTotalProfitAmount)*dTotalProfitAmount);
+                            string sAmountRelative = FormatMoneyForDisplay((100/dShopTotalNetAmount)*dTotalNetAmount);
                             sEndOfCatLine += "," + sProfitRelative + "," + sAmountRelative;
                             tWriter.WriteLine(sEndOfCatLine);
                             tWriter.WriteLine();
@@ -2795,15 +2619,18 @@ namespace BackOffice
                         continue;
                     }
                 }
+
                 #endregion
-                string sEndOfShopLine = "Totals For Shop " + tShop.GetRecordFrom(i)[0] + " - " + tShop.GetRecordFrom(i)[1] + ",,";
+
+                string sEndOfShopLine = "Totals For Shop " + tShop.GetRecordFrom(i)[0] + " - " +
+                                        tShop.GetRecordFrom(i)[1] + ",,";
                 sEndOfShopLine += "," + FormatMoneyForDisplay(dShopQtyTotal);
                 sEndOfShopLine += "," + FormatMoneyForDisplay(dShopGrossTotal);
                 sEndOfShopLine += "," + FormatMoneyForDisplay(dShopNetTotal);
                 sEndOfShopLine += "," + FormatMoneyForDisplay(dShopProfitTotal);
                 if (dNumOfItemsSold > 0)
                 {
-                    sEndOfShopLine += "," + FormatMoneyForDisplay((100 / dShopNetTotal) * dShopProfitTotal);
+                    sEndOfShopLine += "," + FormatMoneyForDisplay((100/dShopNetTotal)*dShopProfitTotal);
                 }
                 tWriter.WriteLine(sEndOfShopLine);
             }
@@ -2811,96 +2638,23 @@ namespace BackOffice
             frmProgress.Close();
             try
             {
-                System.Diagnostics.Process.Start("EXCEL", "REPORT.CSV");
+                Process.Start("EXCEL", "REPORT.CSV");
             }
             catch
             {
                 ;
             }
         }
-        
-        public class StockReportItem : IComparable
-        {
-            public decimal[] dStockLvls;
-            public decimal dRRP;
-            public decimal dAveSales;
-            public string sBarcode;
-            public string sDescription;
-            ReportOrderedBy rOrder;
 
-            public decimal[] dStockLevels
-            {
-                get
-                {
-                    return dStockLvls;
-                }
-                set
-                {
-                    dStockLvls = value;
-                }
-            }
 
-            public bool AllZero
-            {
-                get
-                {
-                    bool bAllZero = true;
-                    for (int i = 0; i < dStockLevels.Length; i++)
-                    {
-                        if (dStockLevels[i] != 0)
-                            bAllZero = false;
-                    }
-                    return bAllZero;
-                }
-            }
-
-            public StockReportItem(ReportOrderedBy r)
-            {
-                rOrder = r;
-            }
-
-            public int CompareTo(object obj)
-            {
-                StockReportItem sOtherItem = (StockReportItem)obj;
-                switch (rOrder)
-                {
-                    case ReportOrderedBy.QIS:
-                        decimal dMaxThis = dStockLevels[0];
-                        for (int i = 0; i < dStockLevels.Length; i++)
-                        {
-                            if (dMaxThis < dStockLevels[i])
-                                dMaxThis = dStockLevels[i];
-                        }
-                        decimal dMaxOther = sOtherItem.dStockLevels[0];
-                        for (int i = 0; i < sOtherItem.dStockLevels.Length; i++)
-                        {
-                            if (dMaxOther < sOtherItem.dStockLevels[i])
-                                dMaxOther = sOtherItem.dStockLevels[i];
-                        }
-                        if (dMaxThis < dMaxOther)
-                            return 1;
-                        else if (dMaxOther == dMaxThis)
-                            return 0;
-                        else
-                            return -1;
-                        break;
-                    case ReportOrderedBy.CodeAlphabetical:
-                        return String.Compare(sBarcode, sOtherItem.sBarcode, true);
-                        break;
-                    case ReportOrderedBy.DescAlphabetical:
-                        return String.Compare(sDescription, sOtherItem.sDescription, true);
-                        break;
-                }
-                return 0;
-            }
-        }
-        public void StockReportToFile(string[] sCategories, ReportOrderedBy rOrder, string sCatGroupName, bool bIncludeZeroItems)
+        public void StockReportToFile(string[] sCategories, ReportOrderedBy rOrder, string sCatGroupName,
+            bool bIncludeZeroItems)
         {
             for (int i = 0; i < sCategories.Length; i++)
             {
                 sCategories[i] = sCategories[i].ToUpper();
             }
-            frmProgressBar fProgress = new frmProgressBar("Generating Stock Report");
+            var fProgress = new frmProgressBar("Generating Stock Report");
             fProgress.Show();
             TextWriter tWriter = new StreamWriter("REPORT.TXT");
             string sTitle = "Stock Level Report For ";
@@ -2927,17 +2681,17 @@ namespace BackOffice
             tWriter.WriteLine(sBreaker);
             tWriter.WriteLine(sPageHeader);
             tWriter.WriteLine(sBreaker);
-            fProgress.pb.Maximum = sCategories.Length * tStock.NumberOfRecords;
+            fProgress.pb.Maximum = sCategories.Length*tStock.NumberOfRecords;
             for (int z = 0; z < sCategories.Length; z++)
             {
                 tWriter.WriteLine("--------------------");
                 tWriter.WriteLine(GetCategoryDesc(sCategories[z]));
                 tWriter.WriteLine("--------------------");
-                StockReportItem[] sItems = new StockReportItem[0];
+                var sItems = new StockReportItem[0];
                 string[] sMainstockData;
                 for (int x = 0; x < tStock.NumberOfRecords; x++)
                 {
-                    fProgress.pb.Value = (z * tStock.NumberOfRecords) + x;
+                    fProgress.pb.Value = (z*tStock.NumberOfRecords) + x;
                     sMainstockData = tStock.GetRecordFrom(x);
                     if (sMainstockData[tStock.FieldNumber("CATEGORY")].StartsWith(sCategories[z]))
                     {
@@ -2948,7 +2702,8 @@ namespace BackOffice
                         sItems[sItems.Length - 1].sDescription = sMainstockData[1];
                         sItems[sItems.Length - 1].dRRP = Convert.ToDecimal(sMainstockData[2]);
                         int nOfResults = 0;
-                        string[,] sResults = tStockStats.SearchAndGetAllMatchingRecords(0, sMainstockData[0], ref nOfResults, true);
+                        string[,] sResults = tStockStats.SearchAndGetAllMatchingRecords(0, sMainstockData[0],
+                            ref nOfResults, true);
                         for (int i = 0; i < nOfResults; i++)
                         {
                             int nShopNum = 0;
@@ -2960,8 +2715,9 @@ namespace BackOffice
                                     break;
                                 }
                             }
-                            sItems[sItems.Length - 1].dStockLevels[nShopNum] = Convert.ToDecimal(sResults[i, tStockStats.FieldNumber("QIS")]);
-                            
+                            sItems[sItems.Length - 1].dStockLevels[nShopNum] =
+                                Convert.ToDecimal(sResults[i, tStockStats.FieldNumber("QIS")]);
+
                             sItems[sItems.Length - 1].dAveSales = Convert.ToDecimal(sResults[i, 2]);
                         }
                     }
@@ -2975,7 +2731,7 @@ namespace BackOffice
                     string sDesc = sItems[i].sDescription;
                     while (sDesc.Length < 30)
                         sDesc += " ";
-                    string[] sStockLevels = new string[sShopCodes.Length];
+                    var sStockLevels = new string[sShopCodes.Length];
                     for (int x = 0; x < sShopCodes.Length; x++)
                     {
                         sStockLevels[x] = FormatMoneyForDisplay(sItems[i].dStockLevels[x]);
@@ -2992,7 +2748,7 @@ namespace BackOffice
                     while (sLine.Length - nLength < 12)
                         sLine += " ";
                     sLine += sItems[i].dAveSales.ToString();
-                   
+
                     if (bIncludeZeroItems || (!bIncludeZeroItems && !sItems[i].AllZero))
                         tWriter.WriteLine(sLine);
                 }
@@ -3001,7 +2757,9 @@ namespace BackOffice
             fProgress.Close();
             tWriter.Close();
         }
-        public void StockReportToPrinter(string[] sCategories,ReportOrderedBy rOrder, string sCatGroupName, bool bIncludeZeroItems)
+
+        public void StockReportToPrinter(string[] sCategories, ReportOrderedBy rOrder, string sCatGroupName,
+            bool bIncludeZeroItems)
         {
             nLineLastPrinted = 6;
             nPrinterPage = 1;
@@ -3015,9 +2773,9 @@ namespace BackOffice
             }
             rCurrentlyPrinting = ReportType.StockLevelReport;
             StockReportToFile(sCategories, rOrder, sCatGroupName, bIncludeZeroItems);
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Stock Level Report";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -3031,9 +2789,9 @@ namespace BackOffice
             sReportTitle = "Stock Level Report";
             rCurrentlyPrinting = ReportType.StockLevelReport;
             StockReportToFile(sBarcodes, rOrder, bIncludeZeroItems);
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Stock Level Report";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -3042,7 +2800,7 @@ namespace BackOffice
 
         public void StockReportToFile(string[] sBarcodes, ReportOrderedBy rOrder, bool bIncludeZeroItems)
         {
-            frmProgressBar fProgress = new frmProgressBar("Generating Stock Report");
+            var fProgress = new frmProgressBar("Generating Stock Report");
             fProgress.Show();
             TextWriter tWriter = new StreamWriter("REPORT.TXT");
             string sTitle = "Stock Level Report";
@@ -3071,7 +2829,7 @@ namespace BackOffice
             tWriter.WriteLine(sPageHeader);
             tWriter.WriteLine(sBreaker);
             fProgress.pb.Maximum = sBarcodes.Length;
-            StockReportItem[] sItems = new StockReportItem[0];
+            var sItems = new StockReportItem[0];
             for (int z = 0; z < sBarcodes.Length; z++)
             {
                 string[] sMainstockData;
@@ -3087,7 +2845,8 @@ namespace BackOffice
                 sItems[sItems.Length - 1].dRRP = Convert.ToDecimal(sMainstockData[2]);
 
                 int nOfResults = 0;
-                string[,] sResults = tStockStats.SearchAndGetAllMatchingRecords(0, sMainstockData[0], ref nOfResults, true);
+                string[,] sResults = tStockStats.SearchAndGetAllMatchingRecords(0, sMainstockData[0], ref nOfResults,
+                    true);
                 for (int i = 0; i < nOfResults; i++)
                 {
                     int nShopNum = 0;
@@ -3099,7 +2858,8 @@ namespace BackOffice
                             break;
                         }
                     }
-                    sItems[sItems.Length - 1].dStockLevels[nShopNum] = Convert.ToDecimal(sResults[i, tStockStats.FieldNumber("QIS")]);
+                    sItems[sItems.Length - 1].dStockLevels[nShopNum] =
+                        Convert.ToDecimal(sResults[i, tStockStats.FieldNumber("QIS")]);
                 }
                 /* sMainstockData = tStock.GetRecordFrom(x);
                  if (sMainstockData[tStock.FieldNumber("CATEGORY")].StartsWith(sCategories[z]))
@@ -3135,7 +2895,7 @@ namespace BackOffice
                 string sDesc = sItems[i].sDescription;
                 while (sDesc.Length < 30)
                     sDesc += " ";
-                string[] sStockLevels = new string[sShopCodes.Length];
+                var sStockLevels = new string[sShopCodes.Length];
                 for (int x = 0; x < sShopCodes.Length; x++)
                 {
                     sStockLevels[x] = FormatMoneyForDisplay(sItems[i].dStockLevels[x]);
@@ -3160,12 +2920,9 @@ namespace BackOffice
             tWriter.Close();
         }
 
-        private int nLineLastPrinted = 7;
-        private int nPrinterPage = 1;
-        private string sReportTitle = "Un-named Report";
-        void ReportPrintPage(object sender, PrintPageEventArgs e)
+        private void ReportPrintPage(object sender, PrintPageEventArgs e)
         {
-            Font fFont = new Font("Consolas", PrinterFontSize);
+            var fFont = new Font("Consolas", PrinterFontSize);
             TextReader tGetReport = new StreamReader("REPORT.TXT");
             string[] sReport = tGetReport.ReadToEnd().Split('\n');
             int nLastLine = sReport.Length - 1;
@@ -3179,18 +2936,38 @@ namespace BackOffice
             bool bFinished = false;
             if (rCurrentlyPrinting == ReportType.SalesReport)
             {
-                nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString("                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)", fFont).Width);
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nCurrentTop));
+                nBoxWidth =
+                    Convert.ToInt32(
+                        e.Graphics.MeasureString(
+                            "                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)",
+                            fFont).Width);
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width/2)),
+                        (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 14.0f)).GetHeight());
-                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width) - Convert.ToInt32((e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width) * 2), (float)nCurrentTop));
+                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f),
+                    new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width) -
+                        Convert.ToInt32(
+                            (e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width)*
+                            2), (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 12.0f)).GetHeight());
-                e.Graphics.DrawString(sReport[8], new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF(nLeft, (float)nCurrentTop));
+                e.Graphics.DrawString(sReport[8], new Font("Arial", 12.0f), new SolidBrush(Color.Black),
+                    new PointF(nLeft, (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 12.0f)).GetHeight());
-                
-                e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight() * 2)));
-                e.Graphics.DrawString("Barcode       Description                    Stock     Quantity     Gross       Net         Profit    Profit(%)  Relative     Relative", fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
+
+                e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                    new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight()*2)));
+                e.Graphics.DrawString(
+                    "Barcode       Description                    Stock     Quantity     Gross       Net         Profit    Profit(%)  Relative     Relative",
+                    fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
                 nCurrentTop += Convert.ToInt32(fFont.GetHeight());
-                e.Graphics.DrawString("                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)", fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
+                e.Graphics.DrawString(
+                    "                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)",
+                    fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
                 nCurrentTop += Convert.ToInt32(fFont.GetHeight());
             }
             else if (rCurrentlyPrinting == ReportType.OrderInfo)
@@ -3200,13 +2977,25 @@ namespace BackOffice
                     nAdd++;
                 fFont = new Font("Consolas", 12.0f);
                 nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString(sReport[12 + nAdd], fFont).Width);
-                e.Graphics.DrawString(DateTime.Now.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF(0, (float)nCurrentTop));
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 12.0f)).Width / 2)), (float)nCurrentTop));
-                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width) - Convert.ToInt32((e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width) * 2), (float)nCurrentTop));
+                e.Graphics.DrawString(DateTime.Now.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black),
+                    new PointF(0, (float) nCurrentTop));
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 12.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 12.0f)).Width/2)),
+                        (float) nCurrentTop));
+                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f),
+                    new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width) -
+                        Convert.ToInt32(
+                            (e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width)*
+                            2), (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 12.0f)).GetHeight());
                 if (nPrinterPage > 1)
                 {
-                    e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
+                    e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                        new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
                     e.Graphics.DrawString(sReport[14], fFont, new SolidBrush(Color.Black), new PointF(0, nCurrentTop));
                     nCurrentTop += Convert.ToInt32(fFont.GetHeight());
                 }
@@ -3214,11 +3003,23 @@ namespace BackOffice
             else if (rCurrentlyPrinting == ReportType.StockValuationReport)
             {
                 nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString(sReport[0], fFont).Width);
-                e.Graphics.DrawString(DateTime.Now.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF(0, (float)nCurrentTop));
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 12.0f)).Width / 2)), (float)nCurrentTop));
-                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width) - Convert.ToInt32((e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width) * 2), (float)nCurrentTop));
+                e.Graphics.DrawString(DateTime.Now.ToString(), new Font("Arial", 12.0f), new SolidBrush(Color.Black),
+                    new PointF(0, (float) nCurrentTop));
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 12.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 12.0f)).Width/2)),
+                        (float) nCurrentTop));
+                e.Graphics.DrawString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f),
+                    new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width) -
+                        Convert.ToInt32(
+                            (e.Graphics.MeasureString("Page " + nPrinterPage.ToString(), new Font("Arial", 12.0f)).Width)*
+                            2), (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 12.0f)).GetHeight());
-                e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight()) * 2));
+                e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                    new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())*2));
                 e.Graphics.DrawString(sReport[1], fFont, new SolidBrush(Color.Black), new PointF(0, nCurrentTop));
                 nCurrentTop += Convert.ToInt32(fFont.GetHeight());
                 e.Graphics.DrawString(sReport[2], fFont, new SolidBrush(Color.Black), new PointF(0, nCurrentTop));
@@ -3226,44 +3027,66 @@ namespace BackOffice
             }
             else if (rCurrentlyPrinting == ReportType.ReprintReceipt)
             {
-                nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString("--------------------------------------------------", fFont).Width);
+                nBoxWidth =
+                    Convert.ToInt32(
+                        e.Graphics.MeasureString("--------------------------------------------------", fFont).Width);
             }
             else if (rCurrentlyPrinting == ReportType.ComissionReport)
             {
                 nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString(sReport[2], fFont).Width);
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nCurrentTop));
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width/2)),
+                        (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 14.0f)).GetHeight());
             }
             else if (rCurrentlyPrinting == ReportType.CommissionSummaryReport)
             {
                 nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString(sReport[4], fFont).Width);
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nCurrentTop));
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width/2)),
+                        (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 14.0f)).GetHeight());
-                e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
+                e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                    new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
                 e.Graphics.DrawString(sReport[2], fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
                 nCurrentTop += Convert.ToInt32(fFont.GetHeight());
             }
             else
             {
                 nBoxWidth = Convert.ToInt32(e.Graphics.MeasureString(sReport[4], fFont).Width);
-                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((e.PageBounds.Width / 2) - Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nCurrentTop));
+                e.Graphics.DrawString(sReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black),
+                    new PointF(
+                        (e.PageBounds.Width/2) -
+                        Convert.ToInt32((e.Graphics.MeasureString(sReportTitle, new Font("Arial", 14.0f)).Width/2)),
+                        (float) nCurrentTop));
                 nCurrentTop += Convert.ToInt32((new Font("Arial", 14.0f)).GetHeight());
-                e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
+                e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                    new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight())));
                 e.Graphics.DrawString(sReport[4], fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
                 nCurrentTop += Convert.ToInt32(fFont.GetHeight());
             }
-            for (int i = nLineLastPrinted; i < sReport.Length && (nCurrentTop + fFont.Height) < e.PageBounds.Height - BottomBoundSize; i++)
+            for (int i = nLineLastPrinted;
+                i < sReport.Length && (nCurrentTop + fFont.Height) < e.PageBounds.Height - BottomBoundSize;
+                i++)
             {
                 if (sReport[i].StartsWith("-") && (i + 2) < sReport.Length)
                 {
-                    e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight(e.Graphics))));
-                    e.Graphics.DrawString(sReport[i + 1], fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
+                    e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                        new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight(e.Graphics))));
+                    e.Graphics.DrawString(sReport[i + 1], fFont, new SolidBrush(Color.Black),
+                        new PointF(nLeft, nCurrentTop));
                     if (i == 3)
                     {
                         nCurrentTop += Convert.ToInt32(fFont.GetHeight());
-                        e.Graphics.FillRectangle(new SolidBrush(cBoxColour), new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight(e.Graphics))));
-                    
-                        e.Graphics.DrawString(sReport[i + 2], fFont, new SolidBrush(Color.Black), new PointF(nLeft, nCurrentTop));
+                        e.Graphics.FillRectangle(new SolidBrush(cBoxColour),
+                            new Rectangle(nLeft, nCurrentTop, nBoxWidth, Convert.ToInt32(fFont.GetHeight(e.Graphics))));
+
+                        e.Graphics.DrawString(sReport[i + 2], fFont, new SolidBrush(Color.Black),
+                            new PointF(nLeft, nCurrentTop));
                         i += 3;
                     }
                     else
@@ -3288,72 +3111,9 @@ namespace BackOffice
             e.HasMorePages = !bFinished;
         }
 
-        public int BottomBoundSize
-        {
-
-            get
-            {
-                int nRecNum = -1;
-                if (!tSettings.SearchForRecord("PRINTERBORDER", 0, ref nRecNum))
-                {
-                    string[] sToAdd = { "PRINTERBORDER", "20" };
-                    tSettings.AddRecord(sToAdd);
-                    tSettings.SaveToFile("SETTINGS.DBF");
-                }
-                return Convert.ToInt32(tSettings.GetRecordFrom("PRINTERBORDER", 0)[1]);
-            }
-            set
-            {
-                int nFieldNum = -1;
-                if (!tSettings.SearchForRecord("PRINTERBORDER", 0, ref nFieldNum))
-                {
-                    string[] sToAdd = { "PRINTERBORDER", "20" };
-                    tSettings.AddRecord(sToAdd);
-                    tSettings.SaveToFile("SETTINGS.DBF");
-                }
-                tSettings.SearchForRecord("PRINTERBORDER", 0, ref nFieldNum);
-                if (nFieldNum != -1)
-                {
-                    tSettings.EditRecordData(nFieldNum, 1, value.ToString());
-                    tSettings.SaveToFile("SETTINGS.DBF");
-                }
-            }
-        }
-        public float PrinterFontSize
-        {
-            get
-            {
-                int nLoc = -1;
-                tSettings.SearchForRecord("PFONTSIZE", 0, ref nLoc);
-                if (nLoc != -1)
-                {
-                    return (float)Convert.ToDecimal(tSettings.GetRecordFrom(nLoc)[1]);
-                }
-                else
-                {
-                    return 7.5f;
-                }
-            }
-            set
-            {
-                int nLoc = -1;
-                tSettings.SearchForRecord("PFONTSIZE", 0, ref nLoc);
-                if (nLoc != -1)
-                {
-                    tSettings.EditRecordData(nLoc, 1, value.ToString());
-                }
-                else
-                {
-                    string[] sToAdd = { "PFONTSIZE", value.ToString() };
-                    tSettings.AddRecord(sToAdd);
-                }
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
         private string[] GetListOfSoldBarcodes(string sShopCode, Period pPeriod)
         {
-            string[] sCodesToReturn = new string[0];
+            var sCodesToReturn = new string[0];
             string sPeriodCode = "";
             switch (pPeriod)
             {
@@ -3375,12 +3135,15 @@ namespace BackOffice
             for (int i = 0; i < tStockStats.NumberOfRecords; i++)
             {
                 string[] sStockStaRecord = tStockStats.GetRecordFrom(i);
-                if (Convert.ToDecimal(sStockStaRecord[tStockStats.FieldNumber(sPeriodCode + "GSALES")]) != 0 && sStockStaRecord[tStockStats.FieldNumber("SHOPCODE")] == sShopCode || sStockStaRecord[0].ToUpper() == "DEP")
+                if (Convert.ToDecimal(sStockStaRecord[tStockStats.FieldNumber(sPeriodCode + "GSALES")]) != 0 &&
+                    sStockStaRecord[tStockStats.FieldNumber("SHOPCODE")] == sShopCode ||
+                    sStockStaRecord[0].ToUpper() == "DEP")
                 {
                     Array.Resize<string>(ref sCodesToReturn, sCodesToReturn.Length + 1);
                     sCodesToReturn[sCodesToReturn.Length - 1] = tStockStats.GetRecordFrom(i)[0];
                 }
-                else if (Convert.ToDecimal(sStockStaRecord[tStockStats.FieldNumber(sPeriodCode + "COGS")]) != 0 && sStockStaRecord[tStockStats.FieldNumber("SHOPCODE")] == sShopCode)
+                else if (Convert.ToDecimal(sStockStaRecord[tStockStats.FieldNumber(sPeriodCode + "COGS")]) != 0 &&
+                         sStockStaRecord[tStockStats.FieldNumber("SHOPCODE")] == sShopCode)
                 {
                     Array.Resize<string>(ref sCodesToReturn, sCodesToReturn.Length + 1);
                     sCodesToReturn[sCodesToReturn.Length - 1] = tStockStats.GetRecordFrom(i)[0];
@@ -3395,7 +3158,7 @@ namespace BackOffice
             string[] sSplitUp = dAmount.ToString().Split('.');
             if (sSplitUp.Length == 1)
             {
-                string[] temp = new string[2];
+                var temp = new string[2];
                 temp[0] = sSplitUp[0];
                 temp[1] = "00";
                 sSplitUp = temp;
@@ -3407,6 +3170,7 @@ namespace BackOffice
 
             return toReturn;
         }
+
         public string FormatMoneyForDisplay(string sAmount)
         {
             decimal dAmount = Convert.ToDecimal(sAmount);
@@ -3414,7 +3178,7 @@ namespace BackOffice
             string[] sSplitUp = dAmount.ToString().Split('.');
             if (sSplitUp.Length == 1)
             {
-                string[] temp = new string[2];
+                var temp = new string[2];
                 temp[0] = sSplitUp[0];
                 temp[1] = "00";
                 sSplitUp = temp;
@@ -3429,11 +3193,14 @@ namespace BackOffice
 
         public string GetLastCollectionDate()
         {
-            DateTime dLatest = new DateTime(2000, 1, 1);
+            var dLatest = new DateTime(2000, 1, 1);
             foreach (Till t in Till)
             {
                 string sLastCollection = t.LastCollection;
-                DateTime dCollectionDate = new DateTime(2000 + Convert.ToInt32(sLastCollection[4].ToString() + sLastCollection[5].ToString()), Convert.ToInt32(sLastCollection[2].ToString() + sLastCollection[3].ToString()), Convert.ToInt32(sLastCollection[0].ToString() + sLastCollection[1].ToString()));
+                var dCollectionDate =
+                    new DateTime(2000 + Convert.ToInt32(sLastCollection[4].ToString() + sLastCollection[5].ToString()),
+                        Convert.ToInt32(sLastCollection[2].ToString() + sLastCollection[3].ToString()),
+                        Convert.ToInt32(sLastCollection[0].ToString() + sLastCollection[1].ToString()));
                 if (DateTime.Compare(dLatest, dCollectionDate) < 0)
                     dLatest = dCollectionDate;
             }
@@ -3467,7 +3234,8 @@ namespace BackOffice
         public string GetDDMMYYDate()
         {
             string sDateTime = DateTime.Now.ToString();
-            string sToReturn = sDateTime[0].ToString() + sDateTime[1].ToString() + sDateTime[3].ToString() + sDateTime[4].ToString() + sDateTime[8].ToString() + sDateTime[9].ToString();
+            string sToReturn = sDateTime[0].ToString() + sDateTime[1].ToString() + sDateTime[3].ToString() +
+                               sDateTime[4].ToString() + sDateTime[8].ToString() + sDateTime[9].ToString();
             return sToReturn;
         }
 
@@ -3483,55 +3251,8 @@ namespace BackOffice
             return tCategory.GetRecordFrom(tCategory.NumberOfRecords - 1)[0];
         }
 
-        public string[] ListOfCards
-        {
-            get
-            {
-                string[] sToReturn = new string[NumberOfCards];
-                for (int i = 0; i < sToReturn.Length; i++)
-                {
-                    string sCardNo = i.ToString();
-                    while (sCardNo.Length < 2)
-                        sCardNo = "0" + sCardNo;
-                    sToReturn[i] = tSettings.GetRecordFrom("CRD" + sCardNo, 0)[1];
-                }
-                return sToReturn;
-            }
-            set
-            {
-                int nCardNo = 0;
-                string sCardNumber = "CRD00";
-                int nRecNum = 0;
-                while (tSettings.SearchForRecord(sCardNumber, 0, ref nRecNum))
-                {
-                    tSettings.DeleteRecord(nRecNum);
-                    nCardNo++;
-                    sCardNumber = nCardNo.ToString();
-                    while (sCardNumber.Length < 2)
-                        sCardNumber = "0" + sCardNumber;
-                    sCardNumber = "CRD" + sCardNumber;
-                }
-                for (int i = 0; i < value.Length; i++)
-                {
-                    string sCRDNum = i.ToString();
-                    while (sCRDNum.Length < 2)
-                        sCRDNum = "0" + sCRDNum;
-                    sCRDNum = "CRD" + sCRDNum;
-                    string[] sToadd = { sCRDNum, value[i] };
-                    tSettings.AddRecord(sToadd);
-                }
-                tSettings.SearchForRecord("NumberOfCards", 0, ref nRecNum);
-                tSettings.EditRecordData(nRecNum, 1, value.Length.ToString());
-                tSettings.SaveToFile("SETTINGS.DBF");
-                for (int i = 0; i < Till.Length; i++)
-                {
-                    GenerateSettingsForTill(Till[i].Number);
-                }
-            }
-        }
-
         /// <summary>
-        /// Add category 1/3 item
+        ///     Add category 1/3 item
         /// </summary>
         /// <param name="sShopCode">The shop code</param>
         /// <param name="sBarcode">The barcode</param>
@@ -3541,15 +3262,16 @@ namespace BackOffice
         /// <param name="sRRP">The RRP</param>
         /// <param name="sVATCode">The VAT Code</param>
         /// <param name="sMinQTY">The minimum order units</param>
-        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory, string sRRP, string sVATCode, string sMinQTY,  string sAveCost)
+        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory,
+            string sRRP, string sVATCode, string sMinQTY, string sAveCost)
         {
             if (sType != "1" && sType != "3")
             {
                 throw new NotImplementedException("BAD PROGRAMMING ALERT");
             }
             int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
-            string[] sStockStaInfo = new string[0];
-            string[] sExistingMainstock = new string[0];
+            var sStockStaInfo = new string[0];
+            var sExistingMainstock = new string[0];
 
             if (nRecNo != -1)
             {
@@ -3563,7 +3285,7 @@ namespace BackOffice
                 sExistingMainstock = tStock.GetRecordFrom(nRecNo);
                 tStock.DeleteRecord(nRecNo);
             }
-            string[] sStockStats = new string[tStockStats.ReturnFieldNames().Length];
+            var sStockStats = new string[tStockStats.ReturnFieldNames().Length];
             sStockStats[0] = sBarcode;
             if (sStockStaInfo.Length == 0)
             {
@@ -3584,7 +3306,7 @@ namespace BackOffice
             sStockStats[1] = sAveCost;
             tStockStats.AddRecord(sStockStats);
 
-            string[] sMainStock = new string[tStock.ReturnFieldNames().Length];
+            var sMainStock = new string[tStock.ReturnFieldNames().Length];
             sMainStock[0] = sBarcode;
             sMainStock[1] = sDescription;
             sMainStock[2] = sRRP;
@@ -3609,28 +3331,30 @@ namespace BackOffice
             tStockStats.SaveToFile("STOCKSTA.DBF");
             AddItemToTillDownload(sBarcode, sShopCode);
         }
-        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory, string sVATCode, string sMinQTY, decimal sAveCost, decimal dTargetMargin)
+
+        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory,
+            string sVATCode, string sMinQTY, decimal sAveCost, decimal dTargetMargin)
         {
             if (sType != "2")
             {
                 throw new NotImplementedException("BAD PROGRAMMING ALERT");
             }
             int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
-            string[] sExistingStockSta = new string[0];
+            var sExistingStockSta = new string[0];
             if (nRecNo != -1)
             {
                 // Delete existing record
                 sExistingStockSta = tStockStats.GetRecordFrom(nRecNo);
                 tStockStats.DeleteRecord(nRecNo);
             }
-            string[] sExistingMainStock = new string[0];
+            var sExistingMainStock = new string[0];
             if (tStock.SearchForRecord(sBarcode, 0, ref nRecNo))
             {
                 // Delete existing record
                 sExistingMainStock = tStock.GetRecordFrom(nRecNo);
                 tStock.DeleteRecord(nRecNo);
             }
-            string[] sStockStats = new string[tStockStats.ReturnFieldNames().Length];
+            var sStockStats = new string[tStockStats.ReturnFieldNames().Length];
             sStockStats[0] = sBarcode;
             sStockStats[1] = sAveCost.ToString();
             if (sExistingStockSta.Length == 0)
@@ -3652,7 +3376,7 @@ namespace BackOffice
             sStockStats[39] = FormatMoneyForDisplay(dTargetMargin);
             tStockStats.AddRecord(sStockStats);
 
-            string[] sMainStock = new string[tStock.ReturnFieldNames().Length];
+            var sMainStock = new string[tStock.ReturnFieldNames().Length];
             sMainStock[0] = sBarcode;
             sMainStock[1] = sDescription;
             sMainStock[2] = "0.00";
@@ -3674,24 +3398,26 @@ namespace BackOffice
             tStockStats.SaveToFile("STOCKSTA.DBF");
             AddItemToTillDownload(sBarcode, sShopCode);
         }
-        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory, string sRRP, string sVATCode, string sMinQTY, string sParentItem, string sCPartQTY)
+
+        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory,
+            string sRRP, string sVATCode, string sMinQTY, string sParentItem, string sCPartQTY)
         {
             int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
-            string[] sExistingStockStats = new string[0];
+            var sExistingStockStats = new string[0];
             if (nRecNo != -1)
             {
                 // Delete existing record
                 sExistingStockStats = tStockStats.GetRecordFrom(nRecNo);
                 tStockStats.DeleteRecord(nRecNo);
             }
-            string[] sExistingMainStock = new string[0];
+            var sExistingMainStock = new string[0];
             if (tStock.SearchForRecord(sBarcode, 0, ref nRecNo))
             {
                 // Delete existing record
                 sExistingMainStock = tStock.GetRecordFrom(nRecNo);
                 tStock.DeleteRecord(nRecNo);
             }
-            string[] sStockStats = new string[tStockStats.ReturnFieldNames().Length];
+            var sStockStats = new string[tStockStats.ReturnFieldNames().Length];
             sStockStats[0] = sBarcode;
             if (sExistingStockStats.Length == 0)
             {
@@ -3712,7 +3438,7 @@ namespace BackOffice
             sStockStats[tStockStats.FieldNumber("CPARTQTY")] = sCPartQTY;
             tStockStats.AddRecord(sStockStats);
 
-            string[] sMainStock = new string[tStock.ReturnFieldNames().Length];
+            var sMainStock = new string[tStock.ReturnFieldNames().Length];
             sMainStock[0] = sBarcode;
             sMainStock[1] = sDescription;
             sMainStock[2] = sRRP;
@@ -3734,15 +3460,17 @@ namespace BackOffice
             tStockStats.SaveToFile("STOCKSTA.DBF");
             AddItemToTillDownload(sBarcode, sShopCode);
         }
-        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory, string sRRP, string sVATCode, string sMinQTY, string sCommCode, decimal dCommAmount, string sRecQty)
+
+        public void AddEditItem(string sShopCode, string sBarcode, string sDescription, string sType, string sCategory,
+            string sRRP, string sVATCode, string sMinQTY, string sCommCode, decimal dCommAmount, string sRecQty)
         {
             if (sType != "6")
             {
                 throw new NotImplementedException("BAD PROGRAMMING ALERT");
             }
             int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
-            string[] sStockStaInfo = new string[0];
-            string[] sExistingMainstock = new string[0];
+            var sStockStaInfo = new string[0];
+            var sExistingMainstock = new string[0];
 
             if (nRecNo != -1)
             {
@@ -3756,7 +3484,7 @@ namespace BackOffice
                 sExistingMainstock = tStock.GetRecordFrom(nRecNo);
                 tStock.DeleteRecord(nRecNo);
             }
-            string[] sStockStats = new string[tStockStats.ReturnFieldNames().Length];
+            var sStockStats = new string[tStockStats.ReturnFieldNames().Length];
             sStockStats[0] = sBarcode;
             if (sStockStaInfo.Length == 0)
             {
@@ -3778,7 +3506,7 @@ namespace BackOffice
             sStockStats[tStockStats.FieldNumber("MINORDQTY")] = sMinQTY;
             tStockStats.AddRecord(sStockStats);
 
-            string[] sMainStock = new string[tStock.ReturnFieldNames().Length];
+            var sMainStock = new string[tStock.ReturnFieldNames().Length];
             sMainStock[0] = sBarcode;
             sMainStock[1] = sDescription;
             sMainStock[2] = sRRP;
@@ -3797,14 +3525,16 @@ namespace BackOffice
             AddItemToTillDownload(sBarcode, sShopCode);
 
             // Now receieve the correct quantity
-            this.ReceiveComissionItem(sBarcode, sRecQty, sShopCode);
+            ReceiveComissionItem(sBarcode, sRecQty, sShopCode);
         }
+
         public void RemoveSuppliersForItem(string sBarcode)
         {
             int nRecNo = 0;
             while (tSupplierIndex.SearchForRecord(sBarcode, 0, ref nRecNo))
                 tSupplierIndex.DeleteRecord(nRecNo);
         }
+
         public void RemoveSuppliersForItem(string sBarcode, string sSupCode)
         {
             int nRecNo = tSupplierIndex.GetRecordNumberFromTwoFields(sBarcode, 0, sSupCode, 1);
@@ -3812,7 +3542,7 @@ namespace BackOffice
                 tSupplierIndex.DeleteRecord(nRecNo);
         }
 
-        
+
         public void AddSupplierForItem(string sBarcode, string sSupplierCode, string sCost, string sSupRef)
         {
             /*
@@ -3822,7 +3552,7 @@ namespace BackOffice
                 // Delete existing record
                 tSupplierIndex.DeleteRecord(nRecNo);
             }*/
-            string[] sSupIndex = new string[tSupplierIndex.ReturnFieldNames().Length];
+            var sSupIndex = new string[tSupplierIndex.ReturnFieldNames().Length];
             sSupIndex[0] = sBarcode;
             sSupIndex[1] = sSupplierCode;
             sSupIndex[2] = sSupRef;
@@ -3845,7 +3575,8 @@ namespace BackOffice
             return tSupplierIndex.SearchAndGetAllMatchingRecords(0, sBarcode, ref nOfResults, true);
         }
 
-        public void AddMultiItemItem(string sBarcode, string sDesc, string sShopCode, string[] sSubBarcodes, decimal[] dQuantities, decimal[] dAmountPerItem)
+        public void AddMultiItemItem(string sBarcode, string sDesc, string sShopCode, string[] sSubBarcodes,
+            decimal[] dQuantities, decimal[] dAmountPerItem)
         {
             // Delete existing item first
             if (DoesMultiItemExist(sBarcode, sShopCode))
@@ -3859,12 +3590,16 @@ namespace BackOffice
                 }
             }
 
-            string[] sHeader = { sBarcode, sSubBarcodes.Length.ToString(), sDesc, sShopCode };
+            string[] sHeader = {sBarcode, sSubBarcodes.Length.ToString(), sDesc, sShopCode};
             tMultiHeader.AddRecord(sHeader);
 
             for (int i = 0; i < sSubBarcodes.Length; i++)
             {
-                string[] sData = { sBarcode, i.ToString(), sSubBarcodes[i], dQuantities[i].ToString(), dAmountPerItem[i].ToString() };
+                string[] sData =
+                {
+                    sBarcode, i.ToString(), sSubBarcodes[i], dQuantities[i].ToString(),
+                    dAmountPerItem[i].ToString()
+                };
                 tMultiData.AddRecord(sData);
             }
             tMultiData.SaveToFile("MULTIDAT.DBF");
@@ -3885,7 +3620,8 @@ namespace BackOffice
                 return false;
         }
 
-        public void GetMultiItemInfo(string sShopCode, string sBarcode, ref string sDesc, ref string[] sSubBarcodes, ref decimal[] dQuantities, ref decimal[] dRRP)
+        public void GetMultiItemInfo(string sShopCode, string sBarcode, ref string sDesc, ref string[] sSubBarcodes,
+            ref decimal[] dQuantities, ref decimal[] dRRP)
         {
             int nRecNum = tMultiHeader.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 3);
             string[] sHeaderData = tMultiHeader.GetRecordFrom(nRecNum);
@@ -3896,7 +3632,7 @@ namespace BackOffice
             dRRP = new decimal[nOfItems];
             for (int i = 0; i < nOfItems; i++)
             {
-                nRecNum = tMultiData.GetRecordNumberFromTwoFields(sBarcode, 0, i.ToString(),1);
+                nRecNum = tMultiData.GetRecordNumberFromTwoFields(sBarcode, 0, i.ToString(), 1);
                 string[] sInfo = tMultiData.GetRecordFrom(nRecNum);
                 sSubBarcodes[i] = sInfo[2];
                 dQuantities[i] = Convert.ToDecimal(sInfo[3]);
@@ -3906,7 +3642,7 @@ namespace BackOffice
 
         public string[] GetListOfCategoryGroupNames()
         {
-            string[] sToReturn = new string[tCatGroupHeader.NumberOfRecords];
+            var sToReturn = new string[tCatGroupHeader.NumberOfRecords];
             for (int i = 0; i < tCatGroupHeader.NumberOfRecords; i++)
             {
                 sToReturn[i] = tCatGroupHeader.GetRecordFrom(i)[1];
@@ -3918,7 +3654,7 @@ namespace BackOffice
         {
             int nCatGroupNum = Convert.ToInt32(tCatGroupHeader.GetRecordFrom(sCatGroupName, 1)[0]);
             int nOfSubGroups = Convert.ToInt32(tCatGroupHeader.GetRecordFrom(sCatGroupName, 1)[2]);
-            string[] sToReturn = new string[nOfSubGroups];
+            var sToReturn = new string[nOfSubGroups];
             for (int i = 0; i < nOfSubGroups; i++)
             {
                 int nFieldNum = tCatGroupData.GetRecordNumberFromTwoFields(nCatGroupNum.ToString(), 0, i.ToString(), 1);
@@ -3952,11 +3688,11 @@ namespace BackOffice
                 }
                 nCatNum++;
             }
-            string[] sHeader = { nCatNum.ToString(), sDesc, sListOfCodes.Length.ToString() };
+            string[] sHeader = {nCatNum.ToString(), sDesc, sListOfCodes.Length.ToString()};
             tCatGroupHeader.AddRecord(sHeader);
             for (int i = 0; i < sListOfCodes.Length; i++)
             {
-                string[] sToAdd = { nCatNum.ToString(), i.ToString(), sListOfCodes[i] };
+                string[] sToAdd = {nCatNum.ToString(), i.ToString(), sListOfCodes[i]};
                 tCatGroupData.AddRecord(sToAdd);
             }
             tCatGroupHeader.SaveToFile("CATGPHDR.DBF");
@@ -3977,13 +3713,14 @@ namespace BackOffice
 
         public void AddItemToTillDownload(string sBarcode, string sShopCode)
         {
-            string[] sToAdd = { sBarcode };
+            string[] sToAdd = {sBarcode};
             AddItemsToTillDownload(sToAdd, sShopCode);
         }
+
         public void AddItemsToTillDownload(string[] sBarcodes, string sShopCode)
         {
-            frmProgressBar fp = new frmProgressBar("Adding Items To Download");
-            fp.pb.Maximum = sBarcodes.Length * Till.Length;
+            var fp = new frmProgressBar("Adding Items To Download");
+            fp.pb.Maximum = sBarcodes.Length*Till.Length;
             if (sBarcodes.Length > 5)
             {
                 fp.Show();
@@ -4002,31 +3739,45 @@ namespace BackOffice
                     }
                     if (!File.Exists("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STOCK.DBF"))
                     {
-                        FileStream fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STOCK.DBF", FileMode.Create);
-                        fsWriter.Write(BackOffice.Properties.Resources.TILLSTOCK, 0, BackOffice.Properties.Resources.TILLSTOCK.Length);
+                        var fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STOCK.DBF",
+                            FileMode.Create);
+                        fsWriter.Write(Resources.TILLSTOCK, 0, Resources.TILLSTOCK.Length);
                         fsWriter.Close();
                     }
                     if (!File.Exists("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF"))
                     {
-                        FileStream fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
-                        fsWriter.Write(BackOffice.Properties.Resources.TILLSTKLEVEL, 0, BackOffice.Properties.Resources.TILLSTKLEVEL.Length);
+                        var fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF",
+                            FileMode.Create);
+                        fsWriter.Write(Resources.TILLSTKLEVEL, 0, Resources.TILLSTKLEVEL.Length);
                         fsWriter.Close();
                     }
 
-                    Table tNewStock = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STOCK.DBF");
-                    Table tStockLvl = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
+                    var tNewStock = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STOCK.DBF");
+                    var tStockLvl = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
                     for (int i = 0; i < sBarcodes.Length; i++)
                     {
-                        fp.pb.Value = (t * sBarcodes.Length) + i;
-                        int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sShopCode, tStockStats.FieldNumber("SHOPCODE"));
+                        fp.pb.Value = (t*sBarcodes.Length) + i;
+                        int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sShopCode,
+                            tStockStats.FieldNumber("SHOPCODE"));
                         string[] sStockStaData = tStockStats.GetRecordFrom(nRecNo);
                         string[] sMainStockData = tStock.GetRecordFrom(sBarcodes[i], 0, true);
-                        string[] sToAddToStock = {sStockStaData[0], sMainStockData[1], sStockStaData[tStockStats.FieldNumber("SHOPCODE")],
-                                             sMainStockData[tStock.FieldNumber("ITEMTYPE")], sMainStockData[tStock.FieldNumber("SELLINGPRI")],
-                                             sMainStockData[tStock.FieldNumber("SELLINGPRI")], sMainStockData[tStock.FieldNumber("VATCATEGOR")],
-                                             sMainStockData[tStock.FieldNumber("PARENTITEM")], "0", sMainStockData[tStock.FieldNumber("CATEGORY")]};
-                        string[] sToAddToStkLevel = {sBarcodes[i], sStockStaData[tStockStats.FieldNumber("SHOPCODE")], 
-                                                sStockStaData[tStockStats.FieldNumber("QIS")], sMainStockData[tStock.FieldNumber("CATEGORY")], sStockStaData[3], GetItemDueDate(sBarcodes[i], sShopCode)};
+                        string[] sToAddToStock =
+                        {
+                            sStockStaData[0], sMainStockData[1], sStockStaData[tStockStats.FieldNumber("SHOPCODE")],
+                            sMainStockData[tStock.FieldNumber("ITEMTYPE")],
+                            sMainStockData[tStock.FieldNumber("SELLINGPRI")],
+                            sMainStockData[tStock.FieldNumber("SELLINGPRI")],
+                            sMainStockData[tStock.FieldNumber("VATCATEGOR")],
+                            sMainStockData[tStock.FieldNumber("PARENTITEM")], "0",
+                            sMainStockData[tStock.FieldNumber("CATEGORY")]
+                        };
+                        string[] sToAddToStkLevel =
+                        {
+                            sBarcodes[i], sStockStaData[tStockStats.FieldNumber("SHOPCODE")],
+                            sStockStaData[tStockStats.FieldNumber("QIS")],
+                            sMainStockData[tStock.FieldNumber("CATEGORY")], sStockStaData[3],
+                            GetItemDueDate(sBarcodes[i], sShopCode)
+                        };
                         tNewStock.AddRecord(sToAddToStock);
                         tStockLvl.AddRecord(sToAddToStkLevel);
 
@@ -4035,15 +3786,17 @@ namespace BackOffice
                             // Commission Item
                             if (!File.Exists("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\COMMISSI.DBF"))
                             {
-                                FileStream fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\COMMISSI.DBF", FileMode.Create);
-                                fsWriter.Write(BackOffice.Properties.Resources.TILLCOMM, 0, BackOffice.Properties.Resources.TILLCOMM.Length);
+                                var fsWriter =
+                                    new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\COMMISSI.DBF",
+                                        FileMode.Create);
+                                fsWriter.Write(Resources.TILLCOMM, 0, Resources.TILLCOMM.Length);
                                 fsWriter.Close();
                             }
-                            Table tCommission = new Table("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\COMMISSI.DBF");
+                            var tCommission = new Table("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\COMMISSI.DBF");
                             nRecNo = 0;
                             if (!tCommission.SearchForRecord(sBarcodes[i], 0, ref nRecNo))
                             {
-                                string[] sToAdd = { sBarcodes[i], sMainStockData[8] };
+                                string[] sToAdd = {sBarcodes[i], sMainStockData[8]};
                                 tCommission.AddRecord(sToAdd);
                             }
                             else
@@ -4076,18 +3829,23 @@ namespace BackOffice
                     }
                     if (!File.Exists("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF"))
                     {
-                        FileStream fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
-                        fsWriter.Write(BackOffice.Properties.Resources.TILLSTKLEVEL, 0, BackOffice.Properties.Resources.TILLSTKLEVEL.Length);
+                        var fsWriter = new FileStream("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF",
+                            FileMode.Create);
+                        fsWriter.Write(Resources.TILLSTKLEVEL, 0, Resources.TILLSTKLEVEL.Length);
                         fsWriter.Close();
                     }
 
-                     Table tStockLvl = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
+                    var tStockLvl = new Table(sTDir + "TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
 
-                    int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, tStockStats.FieldNumber("SHOPCODE"));
+                    int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode,
+                        tStockStats.FieldNumber("SHOPCODE"));
                     string[] sStockStaData = tStockStats.GetRecordFrom(nRecNo);
                     string[] sMainStockData = tStock.GetRecordFrom(sBarcode, 0, true);
-                    string[] sToAddToStkLevel = {sBarcode, sStockStaData[tStockStats.FieldNumber("SHOPCODE")], 
-                                                sStockStaData[tStockStats.FieldNumber("QIS")], sMainStockData[tStock.FieldNumber("CATEGORY")]};
+                    string[] sToAddToStkLevel =
+                    {
+                        sBarcode, sStockStaData[tStockStats.FieldNumber("SHOPCODE")],
+                        sStockStaData[tStockStats.FieldNumber("QIS")], sMainStockData[tStock.FieldNumber("CATEGORY")]
+                    };
                     tStockLvl.AddRecord(sToAddToStkLevel);
                     tStockLvl.SaveToFile("TILL" + Till[t].Number.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
                 }
@@ -4097,7 +3855,7 @@ namespace BackOffice
         public void TotalDownloadToTill(int nTillNumber)
         {
             // Stock First
-            frmProgressBar fp = new frmProgressBar("Total Data Upload");
+            var fp = new frmProgressBar("Total Data Upload");
             fp.pb.Maximum = tStock.NumberOfRecords;
             fp.Show();
 
@@ -4111,21 +3869,22 @@ namespace BackOffice
             }
             if (!File.Exists("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF"))
             {
-                FileStream fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF", FileMode.Create);
-                fsWriter.Write(BackOffice.Properties.Resources.TILLSTOCK, 0, BackOffice.Properties.Resources.TILLSTOCK.Length);
+                var fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF", FileMode.Create);
+                fsWriter.Write(Resources.TILLSTOCK, 0, Resources.TILLSTOCK.Length);
                 fsWriter.Close();
             }
             if (!File.Exists("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF"))
             {
-                FileStream fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
-                fsWriter.Write(BackOffice.Properties.Resources.TILLSTKLEVEL, 0, BackOffice.Properties.Resources.TILLSTKLEVEL.Length);
+                var fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF",
+                    FileMode.Create);
+                fsWriter.Write(Resources.TILLSTKLEVEL, 0, Resources.TILLSTKLEVEL.Length);
                 fsWriter.Close();
             }
-            
-            Table tNewStock = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF");
-            Table tStockLvl = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
-            string[] sStockStaData = new string[tStockStats.ReturnFieldNames().Length];
-            string[] sMainStockData = new string[tStock.ReturnFieldNames().Length];
+
+            var tNewStock = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF");
+            var tStockLvl = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
+            var sStockStaData = new string[tStockStats.ReturnFieldNames().Length];
+            var sMainStockData = new string[tStock.ReturnFieldNames().Length];
             string sBarcode = "";
             string sShopCode = "";
             for (int i = 0; i < tStockStats.NumberOfRecords; i++)
@@ -4141,12 +3900,18 @@ namespace BackOffice
                     if (sMainStockData.Length > 1)
                     {
                         int nRecNo = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
-                        string[] sToAddToStock = {sStockStaData[0], sMainStockData[1], sStockStaData[35],
-                                             sMainStockData[5], sMainStockData[2],
-                                             sMainStockData[2], sMainStockData[3],
-                                             sMainStockData[7], "0", sMainStockData[4]};
-                        string[] sToAddToStkLevel = {sBarcode, sStockStaData[35], 
-                                                sStockStaData[36], sMainStockData[4], sStockStaData[3], GetItemDueDate(sBarcode, sShopCode)};
+                        string[] sToAddToStock =
+                        {
+                            sStockStaData[0], sMainStockData[1], sStockStaData[35],
+                            sMainStockData[5], sMainStockData[2],
+                            sMainStockData[2], sMainStockData[3],
+                            sMainStockData[7], "0", sMainStockData[4]
+                        };
+                        string[] sToAddToStkLevel =
+                        {
+                            sBarcode, sStockStaData[35],
+                            sStockStaData[36], sMainStockData[4], sStockStaData[3], GetItemDueDate(sBarcode, sShopCode)
+                        };
                         tNewStock.AddRecord(sToAddToStock);
                         tStockLvl.AddRecord(sToAddToStkLevel);
                     }
@@ -4154,7 +3919,7 @@ namespace BackOffice
             }
             tNewStock.SaveToFile("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STOCK.DBF");
             tStockLvl.SaveToFile("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
-            
+
             // Now the settings file
 
             GenerateCustomerAccountFileForTill(nTillNumber);
@@ -4172,7 +3937,7 @@ namespace BackOffice
             GenerateVATFileForTill(nTillNumber);
 
             GenerateOffersFileForTill(nTillNumber);
-            
+
             fp.Close();
         }
 
@@ -4191,16 +3956,17 @@ namespace BackOffice
         {
             if (!File.Exists("TILL" + nTillNumber.ToString() + "\\OUTGNG\\COMMISSI.DBF"))
             {
-                FileStream fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\COMMISSI.DBF", FileMode.Create);
-                fsWriter.Write(BackOffice.Properties.Resources.TILLCOMM, 0, BackOffice.Properties.Resources.TILLCOMM.Length);
+                var fsWriter = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\COMMISSI.DBF",
+                    FileMode.Create);
+                fsWriter.Write(Resources.TILLCOMM, 0, Resources.TILLCOMM.Length);
                 fsWriter.Close();
             }
-            Table tTillComm = new Table("TILL" + nTillNumber.ToString() + "\\OUTGNG\\COMMISSI.DBF");
+            var tTillComm = new Table("TILL" + nTillNumber.ToString() + "\\OUTGNG\\COMMISSI.DBF");
             for (int i = 0; i < tStock.NumberOfRecords; i++)
             {
                 if (tStock.GetRecordFrom(i)[5] == "6")
                 {
-                    string[] sToAdd = { tStock.GetRecordFrom(i)[0], tStock.GetRecordFrom(i)[8] };
+                    string[] sToAdd = {tStock.GetRecordFrom(i)[0], tStock.GetRecordFrom(i)[8]};
                     tTillComm.AddRecord(sToAdd);
                 }
             }
@@ -4211,15 +3977,19 @@ namespace BackOffice
         {
             if (!File.Exists("TILl" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF"))
             {
-                FileStream fsWriter = new FileStream("TILL" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF", FileMode.Create);
-                fsWriter.Write(BackOffice.Properties.Resources.TILLACCSTAT, 0, BackOffice.Properties.Resources.TILLACCSTAT.Length);
+                var fsWriter = new FileStream("TILL" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF", FileMode.Create);
+                fsWriter.Write(Resources.TILLACCSTAT, 0, Resources.TILLACCSTAT.Length);
                 fsWriter.Close();
             }
-            Table tTillAccStat = new Table("TILL" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF");
+            var tTillAccStat = new Table("TILL" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF");
             for (int i = 0; i < tAccStat.NumberOfRecords; i++)
             {
                 string[] sCurrent = tAccStat.GetRecordFrom(i);
-                string[] sToAdd = { sCurrent[0], sCurrent[1], sCurrent[2], sCurrent[3], sCurrent[4], sCurrent[5], sCurrent[6] };
+                string[] sToAdd =
+                {
+                    sCurrent[0], sCurrent[1], sCurrent[2], sCurrent[3], sCurrent[4], sCurrent[5],
+                    sCurrent[6]
+                };
                 tTillAccStat.AddRecord(sToAdd);
             }
             tTillAccStat.SaveToFile("TILl" + nTillNum.ToString() + "\\OUTGNG\\ACCSTAT.DBF");
@@ -4227,8 +3997,8 @@ namespace BackOffice
 
         public void GenerateCategoryFileForTill(int nTillNumber)
         {
-            FileStream fsWriter4 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\TILLCAT.DBF", FileMode.Create);
-            fsWriter4.Write(BackOffice.Properties.Resources.TILLCAT, 0, BackOffice.Properties.Resources.TILLCAT.Length);
+            var fsWriter4 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\TILLCAT.DBF", FileMode.Create);
+            fsWriter4.Write(Resources.TILLCAT, 0, Resources.TILLCAT.Length);
             fsWriter4.Close();
 
             File.Copy("CATEGORY.DBF", "TILL" + nTillNumber.ToString() + "\\OUTGNG\\TILLCAT.DBF", true);
@@ -4243,16 +4013,19 @@ namespace BackOffice
             }
             for (int i = 0; i < Directory.GetFiles("OffersReceipt").Length; i++)
             {
-                File.Copy(Directory.GetFiles("OffersReceipt")[i], "TILL" + nTillNumber.ToString() + "\\OUTGNG\\RECEIPTS\\" + Directory.GetFiles("OffersReceipt")[i].Split('\\')[Directory.GetFiles("OffersReceipt")[i].Split('\\').Length - 1], true);
+                File.Copy(Directory.GetFiles("OffersReceipt")[i],
+                    "TILL" + nTillNumber.ToString() + "\\OUTGNG\\RECEIPTS\\" +
+                    Directory.GetFiles("OffersReceipt")[i].Split('\\')[
+                        Directory.GetFiles("OffersReceipt")[i].Split('\\').Length - 1], true);
             }
         }
 
         public void GenerateStaffFileForTill(int nTillNumber)
         {
-            FileStream fsWriter3 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STAFF.DBF", FileMode.Create);
-            fsWriter3.Write(BackOffice.Properties.Resources.TILLSTAFF, 0, BackOffice.Properties.Resources.TILLSTAFF.Length);
+            var fsWriter3 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\STAFF.DBF", FileMode.Create);
+            fsWriter3.Write(Resources.TILLSTAFF, 0, Resources.TILLSTAFF.Length);
             fsWriter3.Close();
-            Table tNewStaff = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STAFF.DBF");
+            var tNewStaff = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\STAFF.DBF");
             while (tNewStaff.NumberOfRecords > 0)
                 tNewStaff.DeleteRecord(0);
             for (int i = 0; i < tStaff.NumberOfRecords; i++)
@@ -4260,12 +4033,12 @@ namespace BackOffice
                 string[] sStaff = tStaff.GetRecordFrom(i);
                 if (sStaff[1] == Till[nTillNumber - 1].ShopCode)
                 {
-                    string[] sNewStaff = { sStaff[0], sStaff[2], "N" };
+                    string[] sNewStaff = {sStaff[0], sStaff[2], "N"};
                     tNewStaff.AddRecord(sNewStaff);
                 }
                 else
                 {
-                    string[] sNewStaff = { (i + 1).ToString(), "", "N" };
+                    string[] sNewStaff = {(i + 1).ToString(), "", "N"};
                     tNewStaff.AddRecord(sNewStaff);
                 }
             }
@@ -4274,11 +4047,11 @@ namespace BackOffice
 
         public void GenerateSettingsForTill(int nTillNumber)
         {
-            FileStream fsWriter2 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\DETAILS.DBF", FileMode.Create);
-            fsWriter2.Write(BackOffice.Properties.Resources.TILLDETAILS, 0, BackOffice.Properties.Resources.TILLDETAILS.Length);
+            var fsWriter2 = new FileStream("TILL" + nTillNumber.ToString() + "\\OUTGNG\\DETAILS.DBF", FileMode.Create);
+            fsWriter2.Write(Resources.TILLDETAILS, 0, Resources.TILLDETAILS.Length);
             fsWriter2.Close();
-            Table tNewDetails = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\DETAILS.DBF");
-            string[] sSettings = new string[40];
+            var tNewDetails = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\OUTGNG\\DETAILS.DBF");
+            var sSettings = new string[40];
             string[] sShopAdd = GetShopAddress(Till[nTillNumber - 1].ShopCode);
             sSettings[0] = sShopAdd[0];
             sSettings[1] = sShopAdd[1];
@@ -4296,7 +4069,7 @@ namespace BackOffice
             {
                 sSettings[6] += " ";
             }
-            sSettings[6] += this.GetShopNameFromCode(Till[nTillNumber - 1].ShopCode);
+            sSettings[6] += GetShopNameFromCode(Till[nTillNumber - 1].ShopCode);
             sSettings[7] = "£";
             sSettings[8] = "N/A";
             if (tSettings.SearchForRecord("DiscountThreshold", "SETTINGNAM"))
@@ -4346,7 +4119,7 @@ namespace BackOffice
             sSettings[39] = "N/A";
             for (int i = 0; i < sSettings.Length; i++)
             {
-                string[] sToadd = { sSettings[i] };
+                string[] sToadd = {sSettings[i]};
                 tNewDetails.AddRecord(sToadd);
             }
             tNewDetails.SaveToFile("TILL" + nTillNumber.ToString() + "\\OUTGNG\\DETAILS.DBF");
@@ -4357,12 +4130,15 @@ namespace BackOffice
             bool bAllOk = true;
             for (int i = 0; i < Till.Length; i++)
             {
-                if (Directory.Exists(Till[i].FileLocation + "\\INGNG") && Directory.Exists("TILL" + Till[i].Number.ToString() + "\\OUTGNG"))
+                if (Directory.Exists(Till[i].FileLocation + "\\INGNG") &&
+                    Directory.Exists("TILL" + Till[i].Number.ToString() + "\\OUTGNG"))
                 {
                     string[] sFiles = Directory.GetFiles("TILL" + Till[i].Number.ToString() + "\\OUTGNG");
                     for (int z = 0; z < sFiles.Length; z++)
                     {
-                        File.Copy(sFiles[z], Till[i].FileLocation + "\\INGNG\\" + sFiles[z].Split('\\')[sFiles[z].Split('\\').Length - 1], true);
+                        File.Copy(sFiles[z],
+                            Till[i].FileLocation + "\\INGNG\\" + sFiles[z].Split('\\')[sFiles[z].Split('\\').Length - 1],
+                            true);
                         File.Delete(sFiles[z]);
                     }
                     if (Directory.Exists("TILL" + Till[i].Number.ToString() + "\\OUTGNG\\RECEIPTS"))
@@ -4374,7 +4150,9 @@ namespace BackOffice
                         }
                         for (int z = 0; z < sFiles.Length; z++)
                         {
-                            File.Copy(sFiles[z], Till[i].FileLocation + "\\INGNG\\OffersReceipt\\" + sFiles[z].Split('\\')[sFiles[z].Split('\\').Length - 1], true);
+                            File.Copy(sFiles[z],
+                                Till[i].FileLocation + "\\INGNG\\OffersReceipt\\" +
+                                sFiles[z].Split('\\')[sFiles[z].Split('\\').Length - 1], true);
                             File.Delete(sFiles[z]);
                         }
                     }
@@ -4393,12 +4171,12 @@ namespace BackOffice
             string sDecrypted = "";
             for (int i = 0; i < sPasswordRecordContents.TrimEnd(' ').Length; i += 6)
             {
-                sDecrypted += ((char)(sPasswordRecordContents[i] - 128)).ToString();
-                sDecrypted += ((char)(sPasswordRecordContents[i + 1] - 123)).ToString();
-                sDecrypted += ((char)(sPasswordRecordContents[i + 2] - 120)).ToString();
-                sDecrypted += ((char)(sPasswordRecordContents[i + 3] - 121)).ToString();
-                sDecrypted += ((char)(sPasswordRecordContents[i + 4] - 122)).ToString();
-                sDecrypted += ((char)(sPasswordRecordContents[i + 5] - 124)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i] - 128)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i + 1] - 123)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i + 2] - 120)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i + 3] - 121)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i + 4] - 122)).ToString();
+                sDecrypted += ((char) (sPasswordRecordContents[i + 5] - 124)).ToString();
                 sDecrypted += ",";
             }
             string[] sPasswords = sDecrypted.Split(',');
@@ -4422,11 +4200,11 @@ namespace BackOffice
 
         public void SetPassword(int nLevel, string sPasswordRecordContents)
         {
-            string[] sDecrypted = new string[3];
+            var sDecrypted = new string[3];
             sDecrypted[0] = "";
             sDecrypted[1] = "";
             sDecrypted[2] = "";
-            string[] sPasswords = new string[3];
+            var sPasswords = new string[3];
             for (int i = 0; i < 3; i++)
             {
                 sPasswords[i] = GetPasswords(i + 1);
@@ -4439,12 +4217,12 @@ namespace BackOffice
             }
             for (int i = 0; i < 3; i++)
             {
-                sDecrypted[i] += ((char)(sPasswords[i][0] + 128)).ToString();
-                sDecrypted[i] += ((char)(sPasswords[i][1] + 123)).ToString();
-                sDecrypted[i] += ((char)(sPasswords[i][2] + 120)).ToString();
-                sDecrypted[i] += ((char)(sPasswords[i][3] + 121)).ToString();
-                sDecrypted[i] += ((char)(sPasswords[i][4] + 122)).ToString();
-                sDecrypted[i] += ((char)(sPasswords[i][5] + 124)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][0] + 128)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][1] + 123)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][2] + 120)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][3] + 121)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][4] + 122)).ToString();
+                sDecrypted[i] += ((char) (sPasswords[i][5] + 124)).ToString();
             }
             string sToAdd = sDecrypted[0] + sDecrypted[1] + sDecrypted[2];
             int nRecNum = 0;
@@ -4471,7 +4249,7 @@ namespace BackOffice
 
         public string[] GetAllCategoryCodes()
         {
-            string[] sToReturn = new string[tCategory.NumberOfRecords];
+            var sToReturn = new string[tCategory.NumberOfRecords];
             for (int i = 0; i < sToReturn.Length; i++)
             {
                 sToReturn[i] = tCategory.GetRecordFrom(i)[0];
@@ -4486,7 +4264,7 @@ namespace BackOffice
             tCategory.EditRecordData(nRecNo, 0, sNewCode);
             tCategory.EditRecordData(nRecNo, 1, sDesc);
             tCategory.SaveToFile("CATEGORY.DBF");
-            frmProgressBar fProgress = new frmProgressBar("Changing Item Categories");
+            var fProgress = new frmProgressBar("Changing Item Categories");
             fProgress.pb.Maximum = tStock.NumberOfRecords;
             fProgress.Show();
             for (int i = 0; i < tStock.NumberOfRecords; i++)
@@ -4496,10 +4274,11 @@ namespace BackOffice
                 {
                     tStock.EditRecordData(i, 4, sNewCode);
                     int nOfRecords = 0;
-                    string[,] sBarcodes = tStockStats.SearchAndGetAllMatchingRecords(0, tStock.GetRecordFrom(i)[0],ref nOfRecords, true);
+                    string[,] sBarcodes = tStockStats.SearchAndGetAllMatchingRecords(0, tStock.GetRecordFrom(i)[0],
+                        ref nOfRecords, true);
                     for (int z = 0; z < nOfRecords; z++)
                     {
-                        AddItemToTillDownload(sBarcodes[z,0], sBarcodes[z, tStockStats.FieldNumber("SHOPCODE")]);
+                        AddItemToTillDownload(sBarcodes[z, 0], sBarcodes[z, tStockStats.FieldNumber("SHOPCODE")]);
                     }
                 }
             }
@@ -4510,7 +4289,7 @@ namespace BackOffice
 
         public void AddCategory(string sCode, string sDesc)
         {
-            string[] sToAdd = { sCode, sDesc };
+            string[] sToAdd = {sCode, sDesc};
             tCategory.AddRecord(sToAdd);
             tCategory.SaveToFile("CATEGORY.DBF");
             for (int i = 0; i < Till.Length; i++)
@@ -4518,15 +4297,6 @@ namespace BackOffice
                 GenerateCategoryFileForTill(Till[i].Number);
             }
             CopyWaitingFilesToTills();
-        }
-
-        public int LastOrderNumber
-        {
-            get
-            {
-                tOrder.SortTable();
-                return Convert.ToInt32(tOrder.GetRecordFrom(tOrder.NumberOfRecords - 1)[0]);
-            }
         }
 
         public decimal GetItemCostBySupplier(string sBarcode, string sSupCode)
@@ -4557,32 +4327,35 @@ namespace BackOffice
             }
         }
 
-        public void AddEditOrderHeader(string sSupplier, string sOrderNum, string sSupRef, string sNotes, string sDueDate, string sDateRaised, string sShopCode)
+        public void AddEditOrderHeader(string sSupplier, string sOrderNum, string sSupRef, string sNotes,
+            string sDueDate, string sDateRaised, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nRecNum = 0;
             if (tOrder.SearchForRecord(sOrderNum, 0, ref nRecNum))
                 tOrder.DeleteRecord(nRecNum);
-            string[] sToAdd = { sOrderNum, sSupplier, sSupRef, sNotes, sDueDate, sDateRaised, sShopCode };
+            string[] sToAdd = {sOrderNum, sSupplier, sSupRef, sNotes, sDueDate, sDateRaised, sShopCode};
             tOrder.AddRecord(sToAdd);
             tOrder.SaveToFile("ORDER.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
+
         public void AddEditOrderHeader(string[] sHeaderData)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nRecNum = 0;
             if (tOrder.SearchForRecord(sHeaderData[0], 0, ref nRecNum))
                 tOrder.DeleteRecord(nRecNum);
             tOrder.AddRecord(sHeaderData);
             tOrder.SaveToFile("ORDER.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
-        public void AddEditOrderData(string[] sBarcodes, string[] sQuantities, string[] sReceived, string[] sCostPrice, string sOrderNumber)
+        public void AddEditOrderData(string[] sBarcodes, string[] sQuantities, string[] sReceived, string[] sCostPrice,
+            string sOrderNumber)
         {
-            this.FindMissingOrderLines();
-            frmProgressBar fp = new frmProgressBar("Adding Barcodes To Order");
+            FindMissingOrderLines();
+            var fp = new frmProgressBar("Adding Barcodes To Order");
             fp.pb.Maximum = sBarcodes.Length + Till.Length;
             fp.Show();
             sOrderNumber = sOrderNumber.TrimStart(' ');
@@ -4624,7 +4397,11 @@ namespace BackOffice
                 }
                 else
                 {
-                    string[] sToAdd = { sOrderNumber, (i + 1).ToString(), sBarcodes[i], sQuantities[i], sReceived[i], sCostPrice[i], "0" };
+                    string[] sToAdd =
+                    {
+                        sOrderNumber, (i + 1).ToString(), sBarcodes[i], sQuantities[i], sReceived[i],
+                        sCostPrice[i], "0"
+                    };
                     tOrderLine.AddRecord(sToAdd);
 
                     /*decimal dOnorder = Convert.ToDecimal(tStockStats.GetRecordFrom(sBarcodes[i], 0, true)[3]);
@@ -4644,17 +4421,22 @@ namespace BackOffice
                     int nTill = Till[i].Number;
                     if (!File.Exists("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF"))
                     {
-                        FileStream fsWriter = new FileStream("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF", FileMode.Create);
-                        fsWriter.Write(BackOffice.Properties.Resources.TILLSTKLEVEL, 0, BackOffice.Properties.Resources.TILLSTKLEVEL.Length);
+                        var fsWriter = new FileStream("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF",
+                            FileMode.Create);
+                        fsWriter.Write(Resources.TILLSTKLEVEL, 0, Resources.TILLSTKLEVEL.Length);
                         fsWriter.Close();
                     }
-                    Table tStockLvl = new Table(sTDir + "TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
+                    var tStockLvl = new Table(sTDir + "TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
                     for (int x = 0; x < sBarcodes.Length; x++)
                     {
                         string[] sStockStaData = GetItemStockStaRecord(sBarcodes[x], Till[i].ShopCode);
                         string[] sMainStockData = GetMainStockInfo(sBarcodes[x]);
-                        string[] sToAddToStkLevel = {sBarcodes[x], sStockStaData[35], 
-                                                sStockStaData[36], sMainStockData[4], sStockStaData[3], GetItemDueDate(sBarcodes[x], Till[i].ShopCode)};
+                        string[] sToAddToStkLevel =
+                        {
+                            sBarcodes[x], sStockStaData[35],
+                            sStockStaData[36], sMainStockData[4], sStockStaData[3],
+                            GetItemDueDate(sBarcodes[x], Till[i].ShopCode)
+                        };
                         tStockLvl.AddRecord(sToAddToStkLevel);
                     }
                     tStockLvl.SaveToFile("TILL" + nTill.ToString() + "\\OUTGNG\\STKLEVEL.DBF");
@@ -4663,7 +4445,7 @@ namespace BackOffice
             tOrderLine.SaveToFile("ORDERLIN.DBF");
             tStockStats.SaveToFile("STOCKSTA.DBF");
             fp.Close();
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public bool DoesOrderExist(string sOrderNum)
@@ -4680,28 +4462,11 @@ namespace BackOffice
             return tOrder.GetRecordFrom(sOrderNum, 0, true);
         }
 
-        class OrderItem : IComparable
+
+        public void GetOrderData(string sOrderNum, ref string[] sBarcodes, ref string[] sOrderQty,
+            ref string[] sReceived, ref string[] sCost)
         {
-
-            #region IComparable Members
-
-            public int CompareTo(object obj)
-            {
-                return -decimal.Compare(((OrderItem)obj).LineNumber, LineNumber);
-            }
-
-            #endregion
-
-            public decimal LineNumber;
-            public string Barcode;
-            public string OrderQty;
-            public string Received;
-            public string Cost;
-            public string InvoiceQty;
-        }
-        public void GetOrderData(string sOrderNum, ref string[] sBarcodes, ref string[] sOrderQty, ref string[] sReceived, ref string[] sCost)
-        {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nOfLines = 0;
             string[,] sAllData = tOrderLine.SearchAndGetAllMatchingRecords(0, sOrderNum, ref nOfLines, true);
             sBarcodes = new string[nOfLines];
@@ -4715,7 +4480,7 @@ namespace BackOffice
                 sReceived[i] = sAllData[i, 4];
                 sCost[i] = sAllData[i, 5];
             }
-            OrderItem[] oItems = new OrderItem[nOfLines];
+            var oItems = new OrderItem[nOfLines];
             for (int i = 0; i < nOfLines; i++)
             {
                 oItems[i] = new OrderItem();
@@ -4733,12 +4498,13 @@ namespace BackOffice
                 sReceived[i] = oItems[i].Received;
                 sCost[i] = oItems[i].Cost;
             }
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
-        public void GetOrderData(string sOrderNum, ref string[] sBarcodes, ref string[] sOrderQty, ref string[] sReceived, ref string[] sCost, ref string[] sInvoiceQty)
+        public void GetOrderData(string sOrderNum, ref string[] sBarcodes, ref string[] sOrderQty,
+            ref string[] sReceived, ref string[] sCost, ref string[] sInvoiceQty)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nOfLines = 0;
             string[,] sAllData = tOrderLine.SearchAndGetAllMatchingRecords(0, sOrderNum, ref nOfLines, true);
             sBarcodes = new string[nOfLines];
@@ -4754,7 +4520,7 @@ namespace BackOffice
                 sCost[i] = sAllData[i, 5];
                 sInvoiceQty[i] = sAllData[i, 6];
             }
-            OrderItem[] oItems = new OrderItem[nOfLines];
+            var oItems = new OrderItem[nOfLines];
             for (int i = 0; i < nOfLines; i++)
             {
                 oItems[i] = new OrderItem();
@@ -4773,12 +4539,13 @@ namespace BackOffice
                 sCost[i] = oItems[i].Cost;
                 sInvoiceQty[i] = oItems[i].InvoiceQty;
             }
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
-        public void GetOrdersWithItemOutstandingIn(string sBarcode, ref string[] sOrderNums, ref string[] sSupCodes, ref string[] sQuantities)
+        public void GetOrdersWithItemOutstandingIn(string sBarcode, ref string[] sOrderNums, ref string[] sSupCodes,
+            ref string[] sQuantities)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nOfResults = 0;
             string[,] sResults = tOrderLine.SearchAndGetAllMatchingRecords(2, sBarcode, ref nOfResults, true);
             sOrderNums = new string[0];
@@ -4801,26 +4568,26 @@ namespace BackOffice
                     sQuantities[sQuantities.Length - 1] = FormatMoneyForDisplay(dQuantityOnOrder - dQuantityReceived);
                 }
             }
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public string[] GetListOfOrderNumbers()
         {
-            this.FindMissingOrderLines();
-            string[] sToReturn = new string[tOrder.NumberOfRecords];
+            FindMissingOrderLines();
+            var sToReturn = new string[tOrder.NumberOfRecords];
             for (int i = 0; i < tOrder.NumberOfRecords; i++)
             {
                 sToReturn[i] = tOrder.GetRecordFrom(i)[0];
             }
             Array.Sort(sToReturn);
             return sToReturn;
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public void ReceiveOrder(string sOrderNum, string[] sBarcodes, string[] sQuantities, string[] sCosts)
         {
-            this.FindMissingOrderLines();
-            frmProgressBar fp = new frmProgressBar("Receiving Stock");
+            FindMissingOrderLines();
+            var fp = new frmProgressBar("Receiving Stock");
             fp.pb.Maximum = sBarcodes.Length;
             fp.Show();
             string sShopCode = tOrder.GetRecordFrom(sOrderNum, 0, true)[6];
@@ -4830,7 +4597,9 @@ namespace BackOffice
                 int nRecLoc = tOrderLine.GetRecordNumberFromTwoFields(sOrderNum, 0, sBarcodes[i], 2);
                 if (nRecLoc == -1)
                 {
-                    throw new NotSupportedException("Error in Receive Order. The barcode wasn't found to be associated with the order. Barcode: " + sBarcodes[i] + " Order Num: " + sOrderNum);
+                    throw new NotSupportedException(
+                        "Error in Receive Order. The barcode wasn't found to be associated with the order. Barcode: " +
+                        sBarcodes[i] + " Order Num: " + sOrderNum);
                 }
                 string[] sExistingRecord = tOrderLine.GetRecordFrom(nRecLoc);
                 decimal dReceived = Convert.ToDecimal(sExistingRecord[4]);
@@ -4841,7 +4610,8 @@ namespace BackOffice
                 int nStockStatsRec = tStockStats.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sShopCode, 35);
                 if (nStockStatsRec == -1)
                 {
-                    throw new NotSupportedException("Error in Receive Order. The barcode & shopcode aren't associated in Stockstats");
+                    throw new NotSupportedException(
+                        "Error in Receive Order. The barcode & shopcode aren't associated in Stockstats");
                 }
                 string[] sStockStaRec = tStockStats.GetRecordFrom(nStockStatsRec);
 
@@ -4859,7 +4629,7 @@ namespace BackOffice
                 // edit yearly cost
                 //tStockStats.EditRecordData(nStockStatsRec, 24, dYearlyDelivered.ToString());
                 // Commented out above and replaced with code below as it was adding qty + cost instead of just cost. LOL
-                dYearlyDelCost = (Convert.ToDecimal(sQuantities[i]) * Convert.ToDecimal(sCosts[i]));
+                dYearlyDelCost = (Convert.ToDecimal(sQuantities[i])*Convert.ToDecimal(sCosts[i]));
                 tStockStats.EditRecordData(nStockStatsRec, 24, dYearlyDelCost.ToString());
                 decimal dAverageCost = Convert.ToDecimal(sStockStaRec[1]);
                 decimal dQtyInStock = Convert.ToDecimal(sStockStaRec[36]);
@@ -4868,7 +4638,9 @@ namespace BackOffice
                 // work out average cost
                 if (dQtyInStock + dNewStock != 0)
                 {
-                    dAverageCost = Math.Round(((dQtyInStock * dAverageCost) + (dNewCost * dNewStock)) / (dNewStock + dQtyInStock), 2, MidpointRounding.AwayFromZero);
+                    dAverageCost =
+                        Math.Round(((dQtyInStock*dAverageCost) + (dNewCost*dNewStock))/(dNewStock + dQtyInStock), 2,
+                            MidpointRounding.AwayFromZero);
                     tStockStats.EditRecordData(nStockStatsRec, 1, dAverageCost.ToString());
                 }
                 decimal dNewQIS = dQtyInStock + dNewStock;
@@ -4887,7 +4659,7 @@ namespace BackOffice
                 }
                 else
                 {
-                    string[] sToAdd = { sBarcodes[i], sSupCode.ToUpper(), sBarcodes[i], sCosts[i], "" };
+                    string[] sToAdd = {sBarcodes[i], sSupCode.ToUpper(), sBarcodes[i], sCosts[i], ""};
                     tSupplierIndex.AddRecord(sToAdd);
                     tSupplierIndex.SaveToFile("SUPINDEX.DBF");
                 }
@@ -4897,7 +4669,7 @@ namespace BackOffice
             tOrderLine.SaveToFile("ORDERLIN.DBF");
             tStockStats.SaveToFile("STOCKSTA.DBF");
             tStock.SaveToFile("MAINSTOC.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public string[] GetBarcodesOfAllItemsFromSupplier(string sSupCode)
@@ -4906,7 +4678,7 @@ namespace BackOffice
             {
                 int nOfRec = 0;
                 string[,] sResults = tSupplierIndex.SearchAndGetAllMatchingRecords(1, sSupCode, ref nOfRec, true);
-                string[] sToReturn = new string[nOfRec];
+                var sToReturn = new string[nOfRec];
                 for (int i = 0; i < nOfRec; i++)
                 {
                     sToReturn[i] = sResults[i, 0];
@@ -4917,38 +4689,20 @@ namespace BackOffice
             {
                 int nOfRec = 0;
                 string[,] sResults = tSupplierIndex.SearchAndGetAllMatchingRecords(1, sSupCode, ref nOfRec);
-                string[] sToReturn = new string[nOfRec];
+                var sToReturn = new string[nOfRec];
                 for (int i = 0; i < nOfRec; i++)
                 {
                     sToReturn[i] = sResults[i, 0];
                 }
                 return sToReturn;
             }
-
         }
 
-        class RequisitionItem : IComparable
+
+        public string[] GetBarcodesOfItemsBySpec(string sSupCode, decimal dMinAveSales, decimal dNOfDays,
+            string sShopCode)
         {
-            public string sBarcode = "";
-            public string sCategoryCode = "";
-            public RequisitionItem(string sBCode, string sCatCode)
-            {
-                sBarcode = sBCode;
-                sCategoryCode = sCatCode;
-            }
-
-            #region IComparable Members
-
-            public int CompareTo(object obj)
-            {
-                return String.Compare(sCategoryCode, ((RequisitionItem)obj).sCategoryCode);
-            }
-
-            #endregion
-        }
-        public string[] GetBarcodesOfItemsBySpec(string sSupCode, decimal dMinAveSales, decimal dNOfDays, string sShopCode)
-        {
-            frmProgressBar fp = new frmProgressBar("Searching For Applicable Items");
+            var fp = new frmProgressBar("Searching For Applicable Items");
             fp.Show();
             string[] sAllCodes = GetBarcodesOfAllItemsFromSupplier(sSupCode);
             fp.pb.Maximum = sAllCodes.Length;
@@ -4976,7 +4730,7 @@ namespace BackOffice
                     {
                         decimal dNumOfDaysStock = 9999;
                         if (dAveSales != 0)
-                            dNumOfDaysStock = dQtyInStock / dAveSales;
+                            dNumOfDaysStock = dQtyInStock/dAveSales;
                         if (dNumOfDaysStock > dNOfDays)
                         {
                             sAllCodes[i] = "$REMOVE";
@@ -4995,7 +4749,7 @@ namespace BackOffice
                 }
             }
             fp.Close();
-            string[] sToReturn = new string[sAllCodes.Length - nToRemove];
+            var sToReturn = new string[sAllCodes.Length - nToRemove];
             int nSkipped = 0;
             for (int i = 0; i < sAllCodes.Length; i++)
             {
@@ -5009,11 +4763,12 @@ namespace BackOffice
                 }
             }
             return sToReturn;
-        
         }
-        public string[] GetBarcodesOfItemsBySpec(decimal dMinAveSales, decimal dNOfDays, string sShopCode, string sCatCode)
+
+        public string[] GetBarcodesOfItemsBySpec(decimal dMinAveSales, decimal dNOfDays, string sShopCode,
+            string sCatCode)
         {
-            frmProgressBar fp = new frmProgressBar("Searching For Applicable Items");
+            var fp = new frmProgressBar("Searching For Applicable Items");
             fp.Show();
             string[] sAllCodes = GetCodesOfItemsInCategory(sCatCode, true);
             fp.pb.Maximum = sAllCodes.Length;
@@ -5041,7 +4796,7 @@ namespace BackOffice
                     {
                         decimal dNumOfDaysStock = 9999;
                         if (dAveSales != 0)
-                            dNumOfDaysStock = dQtyInStock / dAveSales;
+                            dNumOfDaysStock = dQtyInStock/dAveSales;
                         if (dNumOfDaysStock > dNOfDays)
                         {
                             sAllCodes[i] = "$REMOVE";
@@ -5060,7 +4815,7 @@ namespace BackOffice
                 }
             }
             fp.Close();
-            string[] sToReturn = new string[sAllCodes.Length - nToRemove];
+            var sToReturn = new string[sAllCodes.Length - nToRemove];
             int nSkipped = 0;
             for (int i = 0; i < sAllCodes.Length; i++)
             {
@@ -5074,7 +4829,6 @@ namespace BackOffice
                 }
             }
             return sToReturn;
-
         }
 
         public void DiscontinueItem(string sBarcode)
@@ -5103,11 +4857,11 @@ namespace BackOffice
                 tStock.SaveToFile("MAINSTOC.DBF");
             }
         }
-            
+
 
         public void OrderDetailsToFile(string sOrderNum)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             sOrderNum = sOrderNum.TrimStart(' ');
             const int nPageWidth = 80;
             TextWriter tWriter = new StreamWriter("REPORT.TXT", false);
@@ -5146,7 +4900,8 @@ namespace BackOffice
             tWriter.WriteLine(sTel);
             tWriter.WriteLine(sFax);
             int nEmailField = -1;
-            if (tSettings.SearchForRecord("EmailAddress", 0, ref nEmailField) && tSettings.GetRecordFrom(nEmailField)[1] != "")
+            if (tSettings.SearchForRecord("EmailAddress", 0, ref nEmailField) &&
+                tSettings.GetRecordFrom(nEmailField)[1] != "")
             {
                 tWriter.WriteLine("E-Mail " + tSettings.GetRecordFrom(nEmailField)[1] + " with any queries.");
             }
@@ -5165,13 +4920,13 @@ namespace BackOffice
                 while (sToPrint.Length < 15)
                     sToPrint += " ";
                 sToPrint += GetMainStockInfo(sOrderInfo[i, 2])[1];
-                while (sToPrint.Length + sOrderInfo[i,3].Length < 54)
+                while (sToPrint.Length + sOrderInfo[i, 3].Length < 54)
                     sToPrint += " ";
                 sToPrint += sOrderInfo[i, 3];
                 tWriter.WriteLine(sToPrint);
             }
             tWriter.Close();
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public void OrderDetailsToSpreadSheet(string sOrderNum)
@@ -5207,7 +4962,8 @@ namespace BackOffice
             tWriter.WriteLine(sTel);
             tWriter.WriteLine(sFax);
             int nEmailField = -1;
-            if (tSettings.SearchForRecord("EmailAddress", 0, ref nEmailField) && tSettings.GetRecordFrom(nEmailField)[1] != "")
+            if (tSettings.SearchForRecord("EmailAddress", 0, ref nEmailField) &&
+                tSettings.GetRecordFrom(nEmailField)[1] != "")
             {
                 tWriter.WriteLine("E-Mail " + tSettings.GetRecordFrom(nEmailField)[1] + " with any queries.");
             }
@@ -5226,7 +4982,7 @@ namespace BackOffice
             tWriter.Close();
             try
             {
-                System.Diagnostics.Process.Start("EXCEL", "REPORT.CSV");
+                Process.Start("EXCEL", "REPORT.CSV");
             }
             catch
             {
@@ -5234,9 +4990,10 @@ namespace BackOffice
             }
         }
 
-        public void OrderDetailsToFile(string sSupCode, string sShopCode, string[] sItemCodes, string[] sDesc, string[] sOutstanding, string[] sReceived, string sOrderNumber)
+        public void OrderDetailsToFile(string sSupCode, string sShopCode, string[] sItemCodes, string[] sDesc,
+            string[] sOutstanding, string[] sReceived, string sOrderNumber)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             const int nPageWidth = 80;
             TextWriter tWriter = new StreamWriter("REPORT.TXT", false);
             tWriter.WriteLine("Order Number: " + sOrderNumber);
@@ -5295,7 +5052,7 @@ namespace BackOffice
                 tWriter.WriteLine(sToPrint);
             }
             tWriter.Close();
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public string GetItemCodeBySupplier(string sBarcode, string sSupCode)
@@ -5316,25 +5073,26 @@ namespace BackOffice
             sReportTitle = "Purchase Order";
             rCurrentlyPrinting = ReportType.OrderInfo;
             OrderDetailsToFile(sOrderNum);
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Order Number " + sOrderNum;
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
             pPrinter.Print();
         }
 
-        public void OrderDetailsToPrinter(string sSupCode, string sShopCode, string[] sItemCodes, string[] sDesc, string[] sOutstanding, string[] sReceived, string sOrderNum)
+        public void OrderDetailsToPrinter(string sSupCode, string sShopCode, string[] sItemCodes, string[] sDesc,
+            string[] sOutstanding, string[] sReceived, string sOrderNum)
         {
             nLineLastPrinted = 0;
             nPrinterPage = 1;
             sReportTitle = "Purchase Order";
             rCurrentlyPrinting = ReportType.OrderInfo;
             OrderDetailsToFile(sSupCode, sShopCode, sItemCodes, sDesc, sOutstanding, sReceived, sOrderNum);
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Printing Order";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -5365,12 +5123,18 @@ namespace BackOffice
                 for (int i = 0; i < tStockStats.NumberOfRecords; i++)
                 {
                     // Copy Year to Last Year
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "QSOLD"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "QSOLD")]);
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "GSALES"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "GSALES")]);
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "NSALES"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "NSALES")]);
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "COGS"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "COGS")]);
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("YOSLEVEL"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber("YDELIVERED")]);
-                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("YOSCOST"), tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber("YDELCOST")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "QSOLD"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "QSOLD")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "GSALES"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "GSALES")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "NSALES"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "NSALES")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("L" + cPeriodChar.ToString() + "COGS"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber(cPeriodChar.ToString() + "COGS")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("YOSLEVEL"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber("YDELIVERED")]);
+                    tStockStats.EditRecordData(i, tStockStats.FieldNumber("YOSCOST"),
+                        tStockStats.GetRecordFrom(i)[tStockStats.FieldNumber("YDELCOST")]);
                 }
             }
             for (int i = 0; i < tStockStats.NumberOfRecords; i++)
@@ -5411,7 +5175,8 @@ namespace BackOffice
 
             string sOrigDate = GetWeekCommencingDate();
             if (!sOrigDate.Contains("/"))
-                sOrigDate = sOrigDate[0].ToString() + sOrigDate[1].ToString() + "/" + sOrigDate[2].ToString() + sOrigDate[3].ToString() + "/20" + sOrigDate[4].ToString() + sOrigDate[5].ToString();
+                sOrigDate = sOrigDate[0].ToString() + sOrigDate[1].ToString() + "/" + sOrigDate[2].ToString() +
+                            sOrigDate[3].ToString() + "/20" + sOrigDate[4].ToString() + sOrigDate[5].ToString();
             DateTime dt = DateTime.Parse(sOrigDate);
             dt = dt.AddDays(-1);
             string sNewDate = dt.Year.ToString();
@@ -5428,20 +5193,21 @@ namespace BackOffice
             {
                 if (tTotalSales.GetRecordFrom(i)[0] == sNewDate)
                 {
-                    tTotalSales.EditRecordData(i, 3, (Convert.ToDecimal(tTotalSales.GetRecordFrom(i)[3]) + dTotalSales).ToString());
+                    tTotalSales.EditRecordData(i, 3,
+                        (Convert.ToDecimal(tTotalSales.GetRecordFrom(i)[3]) + dTotalSales).ToString());
                     bFound = true;
                     break;
                 }
             }
             if (!bFound)
             {
-                string[] sToAdd = { sNewDate, "0", "0", dTotalSales.ToString() };
+                string[] sToAdd = {sNewDate, "0", "0", dTotalSales.ToString()};
                 tTotalSales.AddRecord(sToAdd);
             }
             tTotalSales.SaveToFile("TOTSALES.DBF");
         }
 
-       /* void BackupBeforeEndOfPeriod(Period p, string sDate)
+        /* void BackupBeforeEndOfPeriod(Period p, string sDate)
         {
             // DDMMYY Date
             string sSaveLoc = "PreCollect\\";
@@ -5490,18 +5256,18 @@ namespace BackOffice
         } */
 
         /// <summary>
-        /// Updates the Stock Length Database, which keeps track of how long items have been out of stock for.
+        ///     Updates the Stock Length Database, which keeps track of how long items have been out of stock for.
         /// </summary>
         private void UpdateStockLengthDatabase()
         {
             tStock.SortTable();
             tStockLength.SortTable();
             tStockStats.SortTable();
-            frmProgressBar fp = new frmProgressBar("Updating Stock Length Database");
+            var fp = new frmProgressBar("Updating Stock Length Database");
             fp.pb.Maximum = tStockStats.NumberOfRecords;
             fp.pb.Value = 0;
             fp.Show();
-            
+
             // Start of the faulty code
             /*
             int nMainStockPos = 0;
@@ -5564,7 +5330,7 @@ namespace BackOffice
                     if (nRecNum == -1)
                     {
                         // Need to add the item
-                        sToAdd = new string[] { sRecord[0], sRecord[35], "0", "0" };
+                        sToAdd = new string[] {sRecord[0], sRecord[35], "0", "0"};
                         tStockLength.AddRecord(sToAdd);
                         nRecNum = tStockLength.GetRecordNumberFromTwoFields(sRecord[0], 0, sRecord[35], 1);
                     }
@@ -5584,7 +5350,6 @@ namespace BackOffice
                         nOutOfStock++;
                         tStockLength.EditRecordData(nRecNum, 3, nOutOfStock.ToString());
                     }
-
                 }
             }
             tStockLength.SaveToFile("STOCKLEN.DBF");
@@ -5596,7 +5361,8 @@ namespace BackOffice
         {
             try
             {
-                Table tRepData = new Table(sTDir + "TILL" + sTillCode + "\\INGNG\\REPDATA" + nDayOfWeek.ToString() + ".DBF");
+                var tRepData =
+                    new Table(sTDir + "TILL" + sTillCode + "\\INGNG\\REPDATA" + nDayOfWeek.ToString() + ".DBF");
                 return tRepData.GetRecordFrom(0)[1];
             }
             catch
@@ -5607,7 +5373,7 @@ namespace BackOffice
 
         public string[] GetListOfLowestLevelCategories()
         {
-            string[] sCats = new string[tCategory.NumberOfRecords];
+            var sCats = new string[tCategory.NumberOfRecords];
             for (int i = 0; i < tCategory.NumberOfRecords; i++)
             {
                 sCats[i] = tCategory.GetRecordFrom(i)[0];
@@ -5625,7 +5391,7 @@ namespace BackOffice
                     }
                 }
             }
-            string[] sToReturn = new string[sCats.Length - nToRemove];
+            var sToReturn = new string[sCats.Length - nToRemove];
             int nSkipped = 0;
             for (int i = 0; i < sCats.Length; i++)
             {
@@ -5641,19 +5407,19 @@ namespace BackOffice
             return sToReturn;
         }
 
-        decimal NetPriceForItem(string sBarcode)
+        private decimal NetPriceForItem(string sBarcode)
         {
             decimal dVATRate = GetVATRateFromCode(sBarcode);
             dVATRate /= 100;
             dVATRate += 1;
             decimal dGrossPrice = Convert.ToDecimal(tStock.GetRecordFrom(sBarcode, 0, true)[2]);
-            return dGrossPrice / dVATRate;
+            return dGrossPrice/dVATRate;
         }
 
 
         public void StockValuationToFile()
         {
-            frmProgressBar pb = new frmProgressBar("Generating Stock Valuation");
+            var pb = new frmProgressBar("Generating Stock Valuation");
             pb.Show();
             string[] sCats = GetListOfLowestLevelCategories();
             TextWriter tWriter = new StreamWriter("REPORT.TXT");
@@ -5694,13 +5460,13 @@ namespace BackOffice
                         if (nRecNum != -1)
                         {
                             string[] sStockSta = tStockStats.GetRecordFrom(nRecNum);
-                            dCatCostTotal += (Convert.ToDecimal(sStockSta[1]) * Convert.ToDecimal(sStockSta[36]));
-                            dCatReplTotal += (Convert.ToDecimal(sItems[z, 8]) * Convert.ToDecimal(sStockSta[36]));
+                            dCatCostTotal += (Convert.ToDecimal(sStockSta[1])*Convert.ToDecimal(sStockSta[36]));
+                            dCatReplTotal += (Convert.ToDecimal(sItems[z, 8])*Convert.ToDecimal(sStockSta[36]));
                             // Calculate Net Price
                             decimal dVATRate = Convert.ToDecimal(tVATRates.GetRecordFrom(sItems[z, 3], 0, true)[2]);
-                            decimal dNet = Math.Round(Convert.ToDecimal(sItems[z, 2]) / (1.0m + (dVATRate / 100)), 2);
-                            dCatNetTotal += (dNet * Convert.ToDecimal(sStockSta[36]));
-                            dCatGrossTotal += (Convert.ToDecimal(sItems[z, 2]) * Convert.ToDecimal(sStockSta[36]));
+                            decimal dNet = Math.Round(Convert.ToDecimal(sItems[z, 2])/(1.0m + (dVATRate/100)), 2);
+                            dCatNetTotal += (dNet*Convert.ToDecimal(sStockSta[36]));
+                            dCatGrossTotal += (Convert.ToDecimal(sItems[z, 2])*Convert.ToDecimal(sStockSta[36]));
                         }
                     }
                     string sToWrite = sCats[x];
@@ -5770,6 +5536,7 @@ namespace BackOffice
             pb.Close();
             tWriter.Close();
         }
+
         public void StockValuationToPrinter()
         {
             StockValuationToFile();
@@ -5777,14 +5544,13 @@ namespace BackOffice
             nPrinterPage = 1;
             sReportTitle = "Stock Valuation Report";
             rCurrentlyPrinting = ReportType.StockValuationReport;
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Stock Valuation Report";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
             pPrinter.Print();
-            
         }
 
         public decimal GetSalesForWeek(int nWeekNum, int nYear)
@@ -5794,9 +5560,9 @@ namespace BackOffice
 
         public string[] GetListOfItemsByCatAndSup(string sShopCode, string sCatCode, string sSupCode)
         {
-            frmProgressBar fp = new frmProgressBar("Searching For Items");
+            var fp = new frmProgressBar("Searching For Items");
             int nRecCount = 0;
-            string[] sCodes = new string[0];
+            var sCodes = new string[0];
             if (sSupCode.Length > 0)
             {
                 string[] sSupItems = tSupplierIndex.SearchAndGetAllMatchingRecords(1, sSupCode, ref nRecCount, true, 0);
@@ -5826,10 +5592,11 @@ namespace BackOffice
                 fp.Show();
                 for (int i = 0; i < nRecCount; i++)
                 {
-                    if (tStockStats.GetRecordNumberFromTwoFields(sCatItems[i,0], 0, sShopCode, 35) != -1 && sCatItems[i,4].StartsWith(sCatCode))
+                    if (tStockStats.GetRecordNumberFromTwoFields(sCatItems[i, 0], 0, sShopCode, 35) != -1 &&
+                        sCatItems[i, 4].StartsWith(sCatCode))
                     {
                         Array.Resize<string>(ref sCodes, sCodes.Length + 1);
-                        sCodes[sCodes.Length - 1] = sCatItems[i,0];
+                        sCodes[sCodes.Length - 1] = sCatItems[i, 0];
                     }
                     fp.pb.Value = i;
                 }
@@ -5841,7 +5608,7 @@ namespace BackOffice
 
         private int DayNumber(string sDateToday)
         {
-            DateTime dtCashup = new DateTime(Convert.ToInt32(sDateToday[4].ToString() + sDateToday[5].ToString()),
+            var dtCashup = new DateTime(Convert.ToInt32(sDateToday[4].ToString() + sDateToday[5].ToString()),
                 Convert.ToInt32(sDateToday[2].ToString() + sDateToday[3].ToString()),
                 Convert.ToInt32(sDateToday[0].ToString() + sDateToday[1].ToString()));
             switch (dtCashup.DayOfWeek.ToString().ToUpper())
@@ -5874,7 +5641,8 @@ namespace BackOffice
         public string[] GetListOfTillTransactionNumbers(int nTillNumber, string sDate)
         {
             int nDayNum = DayNumber(sDate);
-            Table tRepData = new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\INGNG\\REPDATA" + nDayNum.ToString() + ".DBF");
+            var tRepData =
+                new Table(sTDir + "TILL" + nTillNumber.ToString() + "\\INGNG\\REPDATA" + nDayNum.ToString() + ".DBF");
 
             decimal fStartPos = Convert.ToDecimal(tRepData.GetRecordFrom("START", 1)[3]);
             fStartPos *= 100;
@@ -5883,7 +5651,7 @@ namespace BackOffice
             fEndPos *= 100;
 
             int nOfTransactions = Convert.ToInt32(fEndPos - fStartPos) + 1;
-            string[] sToReturn = new string[nOfTransactions];
+            var sToReturn = new string[nOfTransactions];
 
             for (int i = 0; i < nOfTransactions; i++)
             {
@@ -5901,9 +5669,13 @@ namespace BackOffice
             //
             // SpecialTransactions can be CASHPAIDOUT, SPECIFICREFUND, VOID
 
-            Table tRepData = new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\REPDATA" + DayNumber(sDate).ToString() + ".DBF");
-            Table tTData = new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\TDATA" + DayNumber(sDate).ToString() + ".DBF");
-            Table tTHDR = new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\THDR" + DayNumber(sDate).ToString() + ".DBF");
+            var tRepData =
+                new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\REPDATA" + DayNumber(sDate).ToString() +
+                          ".DBF");
+            var tTData =
+                new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\TDATA" + DayNumber(sDate).ToString() + ".DBF");
+            var tTHDR =
+                new Table(sTDir + "TILL" + nTillNum.ToString() + "\\INGNG\\THDR" + DayNumber(sDate).ToString() + ".DBF");
 
             int nTillArrayPos = -1;
             for (int i = 0; i < Till.Length; i++)
@@ -5918,9 +5690,10 @@ namespace BackOffice
             int nOfItems = 0;
             string[,] sTDATARecords = tTData.SearchAndGetAllMatchingRecords(0, sTransactionNumber, ref nOfItems);
             int nOfPaymentMethods = 0;
-            string[,] sPaymentMethods = tTHDR.SearchAndGetAllMatchingRecords(0, sTransactionNumber, ref nOfPaymentMethods);
+            string[,] sPaymentMethods = tTHDR.SearchAndGetAllMatchingRecords(0, sTransactionNumber,
+                ref nOfPaymentMethods);
             nOfPaymentMethods -= 1;
-            string[,] sToReturn = new string[nOfItems + nOfPaymentMethods + 1, 5];
+            var sToReturn = new string[nOfItems + nOfPaymentMethods + 1, 5];
             sToReturn[0, 0] = nOfItems.ToString();
             sToReturn[0, 1] = nOfPaymentMethods.ToString();
             sToReturn[0, 2] = sPaymentMethods[0, 5];
@@ -5948,7 +5721,10 @@ namespace BackOffice
                 if (sPaymentMethods[0, 2].TrimEnd('\0') == "1")
                 {
                     sToReturn[0, 3] = "VOID";
-                    string sUserNumVoided = sPaymentMethods[0, 5].TrimEnd(' ')[sPaymentMethods[0, 5].TrimEnd(' ').Length - 3].ToString() + sPaymentMethods[0, 5][sPaymentMethods[0, 5].TrimEnd(' ').Length - 2].ToString() + sPaymentMethods[0, 5][sPaymentMethods[0, 5].TrimEnd(' ').Length - 1].ToString();
+                    string sUserNumVoided =
+                        sPaymentMethods[0, 5].TrimEnd(' ')[sPaymentMethods[0, 5].TrimEnd(' ').Length - 3].ToString() +
+                        sPaymentMethods[0, 5][sPaymentMethods[0, 5].TrimEnd(' ').Length - 2].ToString() +
+                        sPaymentMethods[0, 5][sPaymentMethods[0, 5].TrimEnd(' ').Length - 1].ToString();
                     sUserNumVoided = sUserNumVoided.TrimStart(' ');
                     int nUserNum = 0;
                     try
@@ -5958,7 +5734,8 @@ namespace BackOffice
                     catch
                     {
                         nUserNum = 0;
-                        throw new NotSupportedException("Could not work out user number that voided this transaction. Press continue to user User number 1");
+                        throw new NotSupportedException(
+                            "Could not work out user number that voided this transaction. Press continue to user User number 1");
                     }
                     string sUserName = "";
                     if (nUserNum < 100)
@@ -5973,8 +5750,10 @@ namespace BackOffice
             {
                 sToReturn[i, 0] = sTDATARecords[i - 1, 3]; // Barcode
                 sToReturn[i, 1] = sTDATARecords[i - 1, 4]; // Description
-                sToReturn[i, 2] = (Convert.ToDecimal(sTDATARecords[i - 1, 6]) - Convert.ToDecimal(sTDATARecords[i - 1, 8])).ToString(); // Price Paid
-                fTotalValueOfTransaction += (float)Convert.ToDecimal(sToReturn[i, 2]);
+                sToReturn[i, 2] =
+                    (Convert.ToDecimal(sTDATARecords[i - 1, 6]) - Convert.ToDecimal(sTDATARecords[i - 1, 8])).ToString();
+                    // Price Paid
+                fTotalValueOfTransaction += (float) Convert.ToDecimal(sToReturn[i, 2]);
                 sToReturn[i, 3] = sTDATARecords[i - 1, 8]; // Discount
                 sToReturn[i, 4] = sTDATARecords[i - 1, 5]; // Quantity
             }
@@ -5987,14 +5766,15 @@ namespace BackOffice
                 if (sToReturn[i, 0].StartsWith("CHRG"))
                     sToReturn[i, 0] += "," + sPaymentMethods[i - (nOfItems), 5] + "," + sTransactionNumber;
                 sToReturn[i, 1] = sPaymentMethods[i - (nOfItems), 3];
-                fTotalAmountPaid += (float)Convert.ToDecimal(sToReturn[i, 1]);
+                fTotalAmountPaid += (float) Convert.ToDecimal(sToReturn[i, 1]);
             }
             float fExcess = (fTotalAmountPaid - fTotalValueOfTransaction);
             if (fExcess > 0.0f)
             {
                 for (int i = 0; i < nOfPaymentMethods; i++)
                 {
-                    if (sToReturn[i + 1 + nOfItems, 0].StartsWith("CASH") && (float)Convert.ToDecimal(sToReturn[i + 1 + nOfItems, 1]) > fExcess)
+                    if (sToReturn[i + 1 + nOfItems, 0].StartsWith("CASH") &&
+                        (float) Convert.ToDecimal(sToReturn[i + 1 + nOfItems, 1]) > fExcess)
                     {
                         sToReturn[i + 1 + nOfItems, 2] = fExcess.ToString();
                     }
@@ -6036,8 +5816,9 @@ namespace BackOffice
             }
             else
             {
-                sDate = sInput[4].ToString() + sInput[5].ToString() + "/" + sInput[2].ToString() + sInput[3].ToString() + "/"
-                    + sInput[0].ToString() + sInput[1].ToString();
+                sDate = sInput[4].ToString() + sInput[5].ToString() + "/" + sInput[2].ToString() + sInput[3].ToString() +
+                        "/"
+                        + sInput[0].ToString() + sInput[1].ToString();
                 sTime = sInput[6].ToString() + sInput[7].ToString() + ":" + sInput[8].ToString() + sInput[9].ToString();
                 sUserID = sInput[10].ToString() + sInput[11].ToString();
                 if (sUserID.StartsWith("0"))
@@ -6047,7 +5828,7 @@ namespace BackOffice
             int nStaffNum = Convert.ToInt32(sUserID);
             string sStaffName = GetStaffName(sShopCode, nStaffNum);
 
-            string[] sToReturn = new string[2];
+            var sToReturn = new string[2];
             sToReturn[0] = sDate + " " + sTime;
             sToReturn[1] = sStaffName;
             return sToReturn;
@@ -6066,7 +5847,7 @@ namespace BackOffice
         public string[] GetCreditCards()
         {
             int nOfCards = Convert.ToInt32(tSettings.GetRecordFrom("NumberOfCards", 0, true)[1]);
-            string[] sCards = new string[nOfCards];
+            var sCards = new string[nOfCards];
             for (int i = 0; i < sCards.Length; i++)
             {
                 string sCardNum = i.ToString();
@@ -6136,7 +5917,8 @@ namespace BackOffice
             }
             catch
             {
-                System.Windows.Forms.MessageBox.Show("A payment method was used that is not present on this computer. The method was " + sPaymentCode + ". Please do a full upload");
+                MessageBox.Show("A payment method was used that is not present on this computer. The method was " +
+                                sPaymentCode + ". Please do a full upload");
                 throw new ArgumentOutOfRangeException("Payment method " + sPaymentCode + " is not found in SETTINGS.DBF");
             }
             string[] sSplit = sPaymentCode.Split(',');
@@ -6150,13 +5932,14 @@ namespace BackOffice
 
         public decimal GetTakingsForDay(string sDate, int nTill)
         {
-            Table tRepData = new Table(sTDir + "TILL" + nTill.ToString() + "\\INGNG\\REPDATA" + DayNumber(sDate) + ".DBF");
+            var tRepData = new Table(sTDir + "TILL" + nTill.ToString() + "\\INGNG\\REPDATA" + DayNumber(sDate) + ".DBF");
             try
             {
                 int nRecNum = 0;
                 if (tRepData.SearchForRecord("DEPO", 1, ref nRecNum))
                 {
-                    return Convert.ToDecimal(tRepData.GetRecordFrom("NOTRAN", 1, true)[3]) - Convert.ToDecimal(tRepData.GetRecordFrom("DEPO", 1, true)[3]);
+                    return Convert.ToDecimal(tRepData.GetRecordFrom("NOTRAN", 1, true)[3]) -
+                           Convert.ToDecimal(tRepData.GetRecordFrom("DEPO", 1, true)[3]);
                 }
                 else
                 {
@@ -6169,78 +5952,7 @@ namespace BackOffice
             }
         }
 
-        public class PaymentMethod
-        {
-            /// <summary>
-            /// The code of the payment method
-            /// </summary>
-            string sPMName;
-            /// <summary>
-            /// The amount paid
-            /// </summary>
-            decimal fAmount;
-            /// <summary>
-            /// The amount paid without change given
-            /// If £6 is due, the customer may give £10. This variable will hold 10, fAmount will hold 6 
-            /// </summary>
-            decimal fGross = 0.0m;
 
-            /// <summary>
-            /// Sets up the payment method
-            /// </summary>
-            /// <param name="name">The code of the payment method</param>
-            /// <param name="flAmount">The amount paid using this payment method</param>
-            public void SetPaymentMethod(string name, decimal flAmount)
-            {
-                sPMName = name;
-                fAmount = flAmount;
-            }
-            /// <summary>
-            /// Sets up the payment method
-            /// </summary>
-            /// <param name="name">The code of the payment method</param>
-            /// <param name="flAmount">The final amount paid</param>
-            /// <param name="flGross">The gross amount paid (possibly in excess of the amount due)</param>
-            public void SetPaymentMethod(string name, decimal flAmount, decimal flGross)
-            {
-                sPMName = name;
-                fAmount = flAmount;
-                fGross = flGross + flAmount;
-            }
-
-            /// <summary>
-            /// The amount paid using this payment method
-            /// </summary>
-            public decimal Amount
-            {
-                get
-                {
-                    return fAmount;
-                }
-            }
-
-            /// <summary>
-            /// The total amount received on this payment method, including excess
-            /// </summary>
-            public decimal Excess
-            {
-                get
-                {
-                    return fGross;
-                }
-            }
-
-            /// <summary>
-            /// Gets the payment code
-            /// </summary>
-            public string PMType
-            {
-                get
-                {
-                    return sPMName;
-                }
-            }
-        }
         public void ReprintTransactionReceipt(int nTransactionNumber, int nTillNum, string sDate)
         {
             ClearReportFile();
@@ -6259,28 +5971,34 @@ namespace BackOffice
             if (sSpecialTransaction == "CASHPAIDOUT")
             {
                 string[] sInfo = ReturnSensibleDateTimeString(sDateTime.TrimEnd('\0'), GetTillShopCode(nTillNum));
-                PrintCashPaidOut(-Convert.ToDecimal(sTransactionInfo[1, 1]), sInfo[0], sInfo[1], nTransactionNumber, nTillNum);
+                PrintCashPaidOut(-Convert.ToDecimal(sTransactionInfo[1, 1]), sInfo[0], sInfo[1], nTransactionNumber,
+                    nTillNum);
             }
             else if (sSpecialTransaction == "SPECIFICREFUND")
             {
                 string sItemDesc = sTransactionInfo[1, 1];
                 decimal fAmountRefunded = -Convert.ToDecimal(sTransactionInfo[2, 1]);
-                PaymentMethod pm = new PaymentMethod();
+                var pm = new PaymentMethod();
                 pm.SetPaymentMethod(sTransactionInfo[2, 0], 0.0m, fAmountRefunded);
                 int nQuantityRefunded = -Convert.ToInt32(sTransactionInfo[1, 4]);
-                PrintSpecificRefund(sItemDesc, fAmountRefunded, pm, nQuantityRefunded, true, nTransactionNumber, nTillNum, sFooterData[1], sFooterData[0]);
+                PrintSpecificRefund(sItemDesc, fAmountRefunded, pm, nQuantityRefunded, true, nTransactionNumber,
+                    nTillNum, sFooterData[1], sFooterData[0]);
             }
             else if (sSpecialTransaction == "GENERALREFUND")
             {
                 decimal fGeneralRefundAmount = -Convert.ToDecimal(sTransactionInfo[1, 1]);
-                PaymentMethod pm = new PaymentMethod();
+                var pm = new PaymentMethod();
                 pm.SetPaymentMethod(sTransactionInfo[1, 0], 0.0m, fGeneralRefundAmount);
                 PrintGeneralRefund(pm, nTransactionNumber, sFooterData[1], sFooterData[0], nTillNum);
             }
             else if (sSpecialTransaction == "RECEIVEDONACCOUNT")
             {
                 PrintReceiptHeader(GetTillShopCode(nTillNum));
-                string[] sToSend = { "", CentralisePrinterText("No transaction to reprint."), "", "", CentralisePrinterText("Till re-written by Thomas Wormald.") };
+                string[] sToSend =
+                {
+                    "", CentralisePrinterText("No transaction to reprint."), "", "",
+                    CentralisePrinterText("Till re-written by Thomas Wormald.")
+                };
                 SendLinesToPrinter(sToSend);
                 PrintReceiptFooter(sFooterData[1], sFooterData[0], "", nTillNum);
                 EmptyPrinterBuffer();
@@ -6293,7 +6011,11 @@ namespace BackOffice
                 // Normal tranasaction
                 for (int i = 1; i <= nOfItems; i++)
                 {
-                    string[] sItemInfo = { sTransactionInfo[i, 0], sTransactionInfo[i, 1], sTransactionInfo[i, 2], sTransactionInfo[i, 3], sTransactionInfo[i, 4] };
+                    string[] sItemInfo =
+                    {
+                        sTransactionInfo[i, 0], sTransactionInfo[i, 1], sTransactionInfo[i, 2],
+                        sTransactionInfo[i, 3], sTransactionInfo[i, 4]
+                    };
                     PrintItem(sItemInfo);
                     nOfItemIncMulQty += Convert.ToInt32(sTransactionInfo[i, 4]);
                     fTotalDue = fTotalDue + Convert.ToDecimal(sTransactionInfo[i, 2]);
@@ -6310,7 +6032,7 @@ namespace BackOffice
                     fExcess = fTotalPaid - fTotalDue;
                 for (int i = nOfItems + 1; i <= nOfItems + nOfPaymentMethods; i++)
                 {
-                    PaymentMethod pmTemp = new PaymentMethod();
+                    var pmTemp = new PaymentMethod();
                     decimal fAmount = Convert.ToDecimal(sTransactionInfo[i, 1]);
                     if (sTransactionInfo[i, 0] != "CASH")
                         pmTemp.SetPaymentMethod(sTransactionInfo[i, 0], fAmount, 0.0m);
@@ -6326,10 +6048,11 @@ namespace BackOffice
                 // Now work out the V.A.T.
                 string[] sCodes = GetVATCodes();
                 decimal[] fRates = GetVATRates();
-                decimal[] fAmount2 = new decimal[fRates.Length];
+                var fAmount2 = new decimal[fRates.Length];
                 for (int i = 1; i <= nOfItems; i++)
                 {
-                    Item iItem = new Item(tStock.GetRecordFrom(sTransactionInfo[i, 0], 0, true), tStockStats.GetRecordFrom(sTransactionInfo[i,0], 0, true));
+                    var iItem = new Item(tStock.GetRecordFrom(sTransactionInfo[i, 0], 0, true),
+                        tStockStats.GetRecordFrom(sTransactionInfo[i, 0], 0, true));
                     for (int x = 0; x < sCodes.Length; x++)
                     {
                         if (sCodes[x] == iItem.VATRate)
@@ -6352,12 +6075,13 @@ namespace BackOffice
             SendLineToPrinter("V.A.T. INCLUDED");
             for (int i = 0; i < fRates.Length; i++)
             {
-                decimal fNet = 1 + (fRates[i] / 100);
-                decimal fVATAmount = fGrossAmounts[i] - ( fGrossAmounts[i] / fNet);
+                decimal fNet = 1 + (fRates[i]/100);
+                decimal fVATAmount = fGrossAmounts[i] - (fGrossAmounts[i]/fNet);
                 if (fGrossAmounts[i] != 0.00m)
                     PrintVATRate(fGrossAmounts[i], fRates[i], fVATAmount);
             }
         }
+
         private void PrintVATRate(decimal fGross, decimal fVATRate, decimal fVATAmount)
         {
             string sVATLine = "       ";
@@ -6367,8 +6091,6 @@ namespace BackOffice
             sVATLine = RightAlignStringOnExistingString(sVATLine, FormatMoneyForDisplay(fVATAmount));
             SendLineToPrinter(sVATLine);
         }
-
-        private const char cReceiptBreaker = '-';
 
         private void PrintReprintReceiptNote()
         {
@@ -6381,7 +6103,7 @@ namespace BackOffice
             SendLineToPrinter(CentralisePrinterText("REPRINT RECEIPT"));
         }
 
-        void SendLinesToPrinter(string[] sLInes)
+        private void SendLinesToPrinter(string[] sLInes)
         {
             TextWriter tWriter = new StreamWriter("REPORT.TXT", true);
             foreach (string Line in sLInes)
@@ -6389,34 +6111,35 @@ namespace BackOffice
             tWriter.Close();
         }
 
-        void SendLineToPrinter(string sLine)
+        private void SendLineToPrinter(string sLine)
         {
-            string[] sToSend = { sLine };
+            string[] sToSend = {sLine};
             SendLinesToPrinter(sToSend);
         }
 
-        void EmptyPrinterBuffer()
+        private void EmptyPrinterBuffer()
         {
             nLineLastPrinted = 0;
             nPrinterPage = 1;
             rCurrentlyPrinting = ReportType.ReprintReceipt;
             sReportTitle = "Reprint Receipt";
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Reprinting Receipt";
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
             pPrinter.Print();
         }
 
-        public void PrintCashPaidOut(decimal fAmountPaidOut, string sDateTime, string sStaffName, int nTransactionNumber, int nTillNum)
+        public void PrintCashPaidOut(decimal fAmountPaidOut, string sDateTime, string sStaffName, int nTransactionNumber,
+            int nTillNum)
         {
             // For reprint receipt
             PrintReceiptHeader(GetTillShopCode(nTillNum));
             SendLineToPrinter(CentralisePrinterText("CASH PAID OUT"));
             PrintBreaker();
-            string[] sToSend = new string[2];
+            var sToSend = new string[2];
             sToSend[0] = RightAlignStringOnExistingString("CASH", FormatMoneyForDisplay(fAmountPaidOut));
             sToSend[1] = "";
             SendLinesToPrinter(sToSend);
@@ -6425,8 +6148,6 @@ namespace BackOffice
             PrintReceiptFooter(sStaffName, sDateTime, nTransactionNumber.ToString(), nTillNum);
             EmptyPrinterBuffer();
         }
-
-        private int nPrinterWidth = 50;
 
         private void PrintBreaker()
         {
@@ -6442,7 +6163,7 @@ namespace BackOffice
         {
             string sToGoOnBeginning = "";
             string sToGoOnEnd = "";
-            int nEitherSide = (nPrinterWidth - sToCentralise.Length) / 2;
+            int nEitherSide = (nPrinterWidth - sToCentralise.Length)/2;
             for (int i = 0; i < nEitherSide; i++)
             {
                 sToGoOnBeginning += " ";
@@ -6453,11 +6174,16 @@ namespace BackOffice
             return sToGoOnBeginning + sToCentralise + sToGoOnEnd;
         }
 
-        public void PrintSpecificRefund(string sItemDesc, decimal fAmountRefunded, PaymentMethod pmRefundMethod, int nQuantity, bool bReprintReceipt, int nTransactionNumber, int nTillNumber, string nStaffNum, string sDate)
+        public void PrintSpecificRefund(string sItemDesc, decimal fAmountRefunded, PaymentMethod pmRefundMethod,
+            int nQuantity, bool bReprintReceipt, int nTransactionNumber, int nTillNumber, string nStaffNum, string sDate)
         {
             // Item array in format { Item code, Item Description, Price Paid, Discount, Quantity }
             PrintReceiptHeader(GetTillShopCode(nTillNumber));
-            string[] sItemInfo = { "NULL", sItemDesc, FormatMoneyForDisplay(-fAmountRefunded), "0.00", nQuantity.ToString() };
+            string[] sItemInfo =
+            {
+                "NULL", sItemDesc, FormatMoneyForDisplay(-fAmountRefunded), "0.00",
+                nQuantity.ToString()
+            };
             PrintReceiptDescAndPriceTitles();
             SendLineToPrinter(CentralisePrinterText("SPECIFIC REFUND"));
             PrintBreaker();
@@ -6471,7 +6197,7 @@ namespace BackOffice
 
         public void PrintReceiptDescAndPriceTitles()
         {
-            string[] sToPrint = new string[2];
+            var sToPrint = new string[2];
             sToPrint[0] = "DESCRIPTION";
             sToPrint[0] = RightAlignStringOnExistingString(sToPrint[0], "PRICE");
             for (int i = 0; i < nPrinterWidth; i++)
@@ -6482,12 +6208,12 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Prints the receipt header that is printed at the top of a till receipt
+        ///     Prints the receipt header that is printed at the top of a till receipt
         /// </summary>
         /// <param name="sShopCode">The code of the shop whose header is to be printed</param>
         public void PrintReceiptHeader(string sShopCode)
         {
-            string[] sToPrint = new string[5];
+            var sToPrint = new string[5];
             for (int i = 0; i < 3; i++)
             {
                 string[] sResult = tSettings.GetRecordFrom(sShopCode + "Address" + (i + 1).ToString(), 0);
@@ -6501,7 +6227,7 @@ namespace BackOffice
                     // If it can't, check in the main settings file, as it's likely that this is an archive stockengine
                 else
                 {
-                    Table tRealSettings = new Table("SETTINGS.DBF");
+                    var tRealSettings = new Table("SETTINGS.DBF");
                     sResult = tRealSettings.GetRecordFrom(sShopCode + "Address" + (i + 1).ToString(), 0);
                     if (sResult.Length > 1)
                     {
@@ -6517,7 +6243,8 @@ namespace BackOffice
                 }
             }
             sToPrint[3] = "TEL:" + tSettings.GetRecordFrom(sShopCode + "PhoneNumber", 0)[1];
-            sToPrint[3] = RightAlignStringOnExistingString(sToPrint[3], "VAT NO:" + tSettings.GetRecordFrom("VATNumber", 0)[1]);
+            sToPrint[3] = RightAlignStringOnExistingString(sToPrint[3],
+                "VAT NO:" + tSettings.GetRecordFrom("VATNumber", 0)[1]);
             for (int i = 0; i < nPrinterWidth; i++)
                 sToPrint[4] += cReceiptBreaker;
             SendLinesToPrinter(sToPrint);
@@ -6534,7 +6261,8 @@ namespace BackOffice
             return sExisting;
         }
 
-        public void PrintGeneralRefund(PaymentMethod pmPayMethod, int nTransactionNumber, string sStaffName, string sDate, int nTillNum)
+        public void PrintGeneralRefund(PaymentMethod pmPayMethod, int nTransactionNumber, string sStaffName,
+            string sDate, int nTillNum)
         {
             PrintReceiptHeader(GetTillShopCode(nTillNum));
             PrintReceiptDescAndPriceTitles();
@@ -6559,7 +6287,7 @@ namespace BackOffice
 
         public void PrintReceiptFooter(string sUserName, string sDateTime, string sTransactionNumber, int nTillNum)
         {
-            string[] sLines = new string[6];
+            var sLines = new string[6];
             for (int i = 0; i < nPrinterWidth; i++)
             {
                 sLines[0] += cReceiptBreaker;
@@ -6583,8 +6311,8 @@ namespace BackOffice
             decimal fDiscountAmount = Convert.ToDecimal(sItemInfo[3]);
             decimal fPricePaid = Convert.ToDecimal(sItemInfo[2]);
             int nQuantity = Convert.ToInt32(sItemInfo[4]);
-            decimal fIndividualPricePaid = fPricePaid / nQuantity;
-            decimal fDiscountPerItem = fDiscountAmount / nQuantity;
+            decimal fIndividualPricePaid = fPricePaid/nQuantity;
+            decimal fDiscountPerItem = fDiscountAmount/nQuantity;
             decimal fGrossPerItem = fIndividualPricePaid + fDiscountPerItem;
             bool bMultipleQuantities = false, bDiscount = false;
             if (nQuantity != 1)
@@ -6608,7 +6336,9 @@ namespace BackOffice
                 sQuantityLine = RightAlignWholeString(sQuantityLine + " " + sFormattedMoney);
             }
             if (fDiscountAmount > 0.0m)
-                sDiscountLine = RightAlignWholeString("DISCOUNT : " + (FormatMoneyForDisplay(fDiscountAmount)) + "     " + FormatMoneyForDisplay(fPricePaid).ToString());
+                sDiscountLine =
+                    RightAlignWholeString("DISCOUNT : " + (FormatMoneyForDisplay(fDiscountAmount)) + "     " +
+                                          FormatMoneyForDisplay(fPricePaid).ToString());
             if (sQuantityLine == "" && sDiscountLine == "")
             {
                 sDescLine = RightAlignStringOnExistingString(sDescLine, FormatMoneyForDisplay(fPricePaid));
@@ -6666,9 +6396,9 @@ namespace BackOffice
             SendLineToPrinter(sChangeDue);
         }
 
-        string[] GetVATCodes()
+        private string[] GetVATCodes()
         {
-            string[] sCodes = new string[tVATRates.NumberOfRecords];
+            var sCodes = new string[tVATRates.NumberOfRecords];
             for (int i = 0; i < sCodes.Length; i++)
             {
                 sCodes[i] = tVATRates.GetRecordFrom(i)[0];
@@ -6676,9 +6406,9 @@ namespace BackOffice
             return sCodes;
         }
 
-        decimal[] GetVATRates()
+        private decimal[] GetVATRates()
         {
-            decimal[] fRates = new decimal[tVATRates.NumberOfRecords];
+            var fRates = new decimal[tVATRates.NumberOfRecords];
             for (int i = 0; i < tVATRates.NumberOfRecords; i++)
             {
                 fRates[i] = Convert.ToDecimal(tVATRates.GetRecordFrom(i)[2]);
@@ -6686,12 +6416,12 @@ namespace BackOffice
             return fRates;
         }
 
-        void ClearReportFile()
+        private void ClearReportFile()
         {
             File.Delete("REPORT.TXT");
         }
-        
-        void ArchiveBackOffStuff(Period pPeriod)
+
+        private void ArchiveBackOffStuff(Period pPeriod)
         {
             if (!Directory.Exists("Archive"))
                 Directory.CreateDirectory("Archive");
@@ -6715,8 +6445,9 @@ namespace BackOffice
             if (!Directory.Exists("Archive\\" + sPeriod))
                 Directory.CreateDirectory("Archive\\" + sPeriod);
             string sLastColl = GetLastCollectionDate();
-            string sDate = "20" + sLastColl[4].ToString() + sLastColl[5].ToString() + "." + sLastColl[2].ToString() + sLastColl[3].ToString() + "." + sLastColl[0].ToString() + sLastColl[1].ToString();
-                string sSaveLoc = "Archive\\" + sPeriod + "\\" + sDate + "\\";
+            string sDate = "20" + sLastColl[4].ToString() + sLastColl[5].ToString() + "." + sLastColl[2].ToString() +
+                           sLastColl[3].ToString() + "." + sLastColl[0].ToString() + sLastColl[1].ToString();
+            string sSaveLoc = "Archive\\" + sPeriod + "\\" + sDate + "\\";
             if (!Directory.Exists(sSaveLoc))
                 Directory.CreateDirectory(sSaveLoc);
             tAccStat.SaveToFile(sSaveLoc + "ACCSTAT.DBF");
@@ -6757,10 +6488,9 @@ namespace BackOffice
             }
 
             FileManagementEngine.CompressArchiveDirectory(sSaveLoc);
-           
         }
 
-        
+
         public bool DoesParentHaveChildren(string sParentCode)
         {
             for (int i = 0; i < tStock.NumberOfRecords; i++)
@@ -6770,6 +6500,7 @@ namespace BackOffice
             }
             return false;
         }
+
         //38
         public void ChangeChildPricesToMatchParent(string sParentCode, decimal dNewPrice, string sShopCode)
         {
@@ -6779,14 +6510,19 @@ namespace BackOffice
                 bChanged = false;
                 for (int i = 0; i < tStock.NumberOfRecords; i++)
                 {
-                    if (tStock.GetRecordFrom(i)[7] == sParentCode && Convert.ToDecimal(tStock.GetRecordFrom(i)[2]) != dNewPrice)
+                    if (tStock.GetRecordFrom(i)[7] == sParentCode &&
+                        Convert.ToDecimal(tStock.GetRecordFrom(i)[2]) != dNewPrice)
                     {
                         if (Convert.ToDecimal(tStockStats.GetRecordFrom(tStock.GetRecordFrom(i)[0], 0)[38]) == 1)
                         {
                             tStock.EditRecordData(i, 2, dNewPrice.ToString());
                             for (int x = 0; x < Till.Length; x++)
                             {
-                                AddEditItem(sShopCode, tStock.GetRecordFrom(i)[0], tStock.GetRecordFrom(i)[1], tStock.GetRecordFrom(i)[5], tStock.GetRecordFrom(i)[4], tStock.GetRecordFrom(i)[2], tStock.GetRecordFrom(i)[3], tStockStats.GetRecordFrom(tStock.GetRecordFrom(i)[0], 0, true)[37], sParentCode, tStockStats.GetRecordFrom(tStock.GetRecordFrom(i)[0], 0, true)[38]);
+                                AddEditItem(sShopCode, tStock.GetRecordFrom(i)[0], tStock.GetRecordFrom(i)[1],
+                                    tStock.GetRecordFrom(i)[5], tStock.GetRecordFrom(i)[4], tStock.GetRecordFrom(i)[2],
+                                    tStock.GetRecordFrom(i)[3],
+                                    tStockStats.GetRecordFrom(tStock.GetRecordFrom(i)[0], 0, true)[37], sParentCode,
+                                    tStockStats.GetRecordFrom(tStock.GetRecordFrom(i)[0], 0, true)[38]);
                             }
                         }
                         bChanged = true;
@@ -6812,18 +6548,19 @@ namespace BackOffice
                 else
                 {
                     return false;
-
                 }
             }
             return true;
         }
 
-        public void TransferStockItem(string sSourceShopCode, string sDestShopCode, string sBarcode, decimal dQty, bool bCanOverrideCheck)
+        public void TransferStockItem(string sSourceShopCode, string sDestShopCode, string sBarcode, decimal dQty,
+            bool bCanOverrideCheck)
         {
             try
             {
                 TextWriter tWriter = new StreamWriter("transfers.txt", true);
-                tWriter.Write(DateTime.Now.ToString() + ": " + sBarcode + " going from " + sSourceShopCode + " to " + sDestShopCode + ", quantity " + FormatMoneyForDisplay(dQty));
+                tWriter.Write(DateTime.Now.ToString() + ": " + sBarcode + " going from " + sSourceShopCode + " to " +
+                              sDestShopCode + ", quantity " + FormatMoneyForDisplay(dQty));
                 tWriter.Close();
             }
             catch
@@ -6832,12 +6569,12 @@ namespace BackOffice
             }
             if (GetMainStockInfo(sBarcode).Length < 5)
             {
-                System.Windows.Forms.MessageBox.Show("You can't alter the stock level of this item, as the barcode doesn't exist yet");
+                MessageBox.Show("You can't alter the stock level of this item, as the barcode doesn't exist yet");
                 return;
             }
             if (GetMainStockInfo(sBarcode)[5] != "1" && !bCanOverrideCheck)
             {
-                System.Windows.Forms.MessageBox.Show("Only type 1 items may be transferred!");
+                MessageBox.Show("Only type 1 items may be transferred!");
                 return;
             }
             tOrderLine.SortTable();
@@ -6846,7 +6583,8 @@ namespace BackOffice
             {
                 if (dLeftToRemove > 0)
                 {
-                    if (tOrderLine.GetRecordFrom(i)[2] == sBarcode && tOrder.GetRecordFrom(tOrderLine.GetRecordFrom(i)[0].TrimStart(' '), 0)[6] == sSourceShopCode)
+                    if (tOrderLine.GetRecordFrom(i)[2] == sBarcode &&
+                        tOrder.GetRecordFrom(tOrderLine.GetRecordFrom(i)[0].TrimStart(' '), 0)[6] == sSourceShopCode)
                     {
                         decimal dQtyRecd = Convert.ToDecimal(tOrderLine.GetRecordFrom(i)[4]);
                         if (dLeftToRemove > dQtyRecd)
@@ -6895,7 +6633,7 @@ namespace BackOffice
                     }
                 }
                 else
-                    break;//return;
+                    break; //return;
             }
             int nRecPos = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sSourceShopCode, 35);
             if (nRecPos != -1)
@@ -6978,8 +6716,8 @@ namespace BackOffice
         }*/
 
         /// <summary>
-        /// Checks to see if the commissioner is ever used in COMMITEM
-        /// Used when the user might want to delete the commissioner
+        ///     Checks to see if the commissioner is ever used in COMMITEM
+        ///     Used when the user might want to delete the commissioner
         /// </summary>
         /// <param name="sCommCode">The commissioner's code</param>
         /// <returns></returns>
@@ -6990,7 +6728,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Deletes the given commissioner from the databases
+        ///     Deletes the given commissioner from the databases
         /// </summary>
         /// <param name="sCommCode">The commissioner to delete</param>
         public void DeleteCommissioner(string sCommCode)
@@ -7031,7 +6769,9 @@ namespace BackOffice
                 return GetDDMMYYDate();
             else
             {
-                Table tRepData = new Table(sTDir + "TILL" + Till[nTillNum].Number + "\\INGNG\\REPDATA" + nEarliestDay.ToString() + ".DBF");
+                var tRepData =
+                    new Table(sTDir + "TILL" + Till[nTillNum].Number + "\\INGNG\\REPDATA" + nEarliestDay.ToString() +
+                              ".DBF");
                 return tRepData.GetRecordFrom(0)[1];
             }
             return GetDDMMYYDate();
@@ -7085,7 +6825,8 @@ namespace BackOffice
             return sMonthName + " " + sYearNum;
         }
 
-        public void EnterInvoiceCost(string sOrderNum, string[] sBarcodes, decimal[] dQtyInvoiced, decimal[] dInvCosts, decimal[] dOldCosts)
+        public void EnterInvoiceCost(string sOrderNum, string[] sBarcodes, decimal[] dQtyInvoiced, decimal[] dInvCosts,
+            decimal[] dOldCosts)
         {
             string[] sHeader = GetOrderHeader(sOrderNum);
             for (int i = 0; i < sBarcodes.Length; i++)
@@ -7099,27 +6840,28 @@ namespace BackOffice
                 nRecNum = tStockStats.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sHeader[6], 35);
                 decimal dAveCost = Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[1]);
                 decimal dQIS = Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[36]);
-                decimal dFullCost = dAveCost * dQIS;
-                dFullCost -= (dQtyInvoiced[i] * dOldCosts[i]);
-                dFullCost += (dQtyInvoiced[i] * dInvCosts[i]);
+                decimal dFullCost = dAveCost*dQIS;
+                dFullCost -= (dQtyInvoiced[i]*dOldCosts[i]);
+                dFullCost += (dQtyInvoiced[i]*dInvCosts[i]);
                 if (dQIS > 0)
-                    dAveCost = Math.Round(dFullCost / dQIS, 2, MidpointRounding.AwayFromZero);
+                    dAveCost = Math.Round(dFullCost/dQIS, 2, MidpointRounding.AwayFromZero);
                 else
                     dAveCost = dFullCost;
                 tStockStats.EditRecordData(nRecNum, 1, dAveCost.ToString());
 
                 // Check if YDELIVERED needs to be edited
                 string sDelYear = sHeader[4][4].ToString() + sHeader[4][5].ToString();
-                string sYearNow = DateTime.Now.Year.ToString()[2].ToString() + DateTime.Now.Year.ToString()[3].ToString();
+                string sYearNow = DateTime.Now.Year.ToString()[2].ToString() +
+                                  DateTime.Now.Year.ToString()[3].ToString();
 
                 if (sDelYear == sYearNow)
                 {
                     decimal dDelCost = Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[24]);
-                    dDelCost -= (dQtyInvoiced[i] * dOldCosts[i]);
-                    dDelCost += (dQtyInvoiced[i] * dInvCosts[i]);
+                    dDelCost -= (dQtyInvoiced[i]*dOldCosts[i]);
+                    dDelCost += (dQtyInvoiced[i]*dInvCosts[i]);
                     tStockStats.EditRecordData(nRecNum, 24, dDelCost.ToString());
                 }
-                
+
 
                 tStock.SearchForRecord(sBarcodes[i], 0, ref nRecNum);
                 tStock.EditRecordData(nRecNum, 8, dInvCosts[i].ToString());
@@ -7131,7 +6873,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Adds or edits a commissioner
+        ///     Adds or edits a commissioner
         /// </summary>
         /// <param name="sCode">The commissioner's code</param>
         /// <param name="sName">The commissioners name</param>
@@ -7142,11 +6884,11 @@ namespace BackOffice
             {
                 tCommissioners.DeleteRecord(nRecNum);
             }
-            string[] sToAdd = { sCode, sName };
+            string[] sToAdd = {sCode, sName};
             tCommissioners.AddRecord(sToAdd);
             tCommissioners.SaveToFile("COMMPPL.DBF");
         }
-        
+
         public string GetCommissionerName(string sCode)
         {
             try
@@ -7161,7 +6903,7 @@ namespace BackOffice
 
         public string[] GetListOfCommissioners()
         {
-            string[] sToReturn = new string[tCommissioners.NumberOfRecords];
+            var sToReturn = new string[tCommissioners.NumberOfRecords];
             for (int i = 0; i < sToReturn.Length; i++)
             {
                 sToReturn[i] = tCommissioners.GetRecordFrom(i)[0];
@@ -7170,7 +6912,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Gets the percentage of the time that the given item is out of stock for
+        ///     Gets the percentage of the time that the given item is out of stock for
         /// </summary>
         /// <param name="sBarcode">The barcode of the ite</param>
         /// <param name="sShopCode">The shop to check at</param>
@@ -7188,7 +6930,7 @@ namespace BackOffice
                 decimal dOutOfStock = Convert.ToDecimal(tStockLength.GetRecordFrom(nRecLoc)[3]);
 
                 // Calculate the percentage of time that the item is out of stock
-                decimal dPercentage = (100 / dTotal) * dOutOfStock;
+                decimal dPercentage = (100/dTotal)*dOutOfStock;
 
                 return Math.Round(dPercentage, 3);
             }
@@ -7283,27 +7025,29 @@ namespace BackOffice
             int nMonth = Convert.ToInt32(sDateSplit[1]);
             int nDay = Convert.ToInt32(sDateSplit[0]);
 
-            DateTime dt = new DateTime(nYear, nMonth, nDay);
+            var dt = new DateTime(nYear, nMonth, nDay);
 
             CultureInfo ciGetNumber = CultureInfo.CurrentCulture;
-            int returnNumber = ciGetNumber.Calendar.GetWeekOfYear(dt, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            int returnNumber = ciGetNumber.Calendar.GetWeekOfYear(dt, CalendarWeekRule.FirstFourDayWeek,
+                DayOfWeek.Monday);
             return returnNumber;
-
         }
 
         public decimal GetWeeklySales(int nWeekNum, int nYearToFind, ref string sWeekCommencing)
         {
             tTotalSales.SortTable();
-            
+
             for (int i = 0; i < tTotalSales.NumberOfRecords; i++)
             {
                 if (tTotalSales.GetRecordFrom(i)[0].StartsWith(nYearToFind.ToString()))
                 {
                     string sDate = tTotalSales.GetRecordFrom(i)[0];
-                    int nYear = Convert.ToInt32(sDate[0].ToString() + sDate[1].ToString() + sDate[2].ToString() + sDate[3].ToString());
+                    int nYear =
+                        Convert.ToInt32(sDate[0].ToString() + sDate[1].ToString() + sDate[2].ToString() +
+                                        sDate[3].ToString());
                     int nMonth = Convert.ToInt32(sDate[4].ToString() + sDate[5].ToString());
                     int nDay = Convert.ToInt32(sDate[6].ToString() + sDate[7].ToString());
-                    DateTime dt = new DateTime(nYear, nMonth, nDay);
+                    var dt = new DateTime(nYear, nMonth, nDay);
                     dt = dt.AddDays(1.0d);
                     sDate = dt.Day.ToString() + "/" + dt.Month.ToString() + "/" + dt.Year.ToString();
                     if (WeekCalc(sDate) == nWeekNum)
@@ -7370,57 +7114,23 @@ namespace BackOffice
             tWriter.Close();
         }*/
 
-        private class CommissionReportItem : IComparable
-        {
-            private string[] sRecordInfo;
-
-            public CommissionReportItem(string[] sRecordInfo)
-            {
-                this.sRecordInfo = sRecordInfo;
-            }
-
-            public string[] GetRecordInfo()
-            {
-                return sRecordInfo;
-            }
-
-            public DateTime GetDateTimeSold()
-            {
-                string sStartDate = sRecordInfo[7];
-                DateTime dtThisDate = new DateTime(2000 + Convert.ToInt32(sStartDate[4].ToString() + sStartDate[5].ToString()),
-                                            Convert.ToInt32(sStartDate[2].ToString() + sStartDate[3].ToString()),
-                                            Convert.ToInt32(sStartDate[0].ToString() + sStartDate[1].ToString()));
-                return dtThisDate;
-            }
-
-
-            #region IComparable Members
-
-            public int CompareTo(object obj)
-            {
-                return DateTime.Compare(this.GetDateTimeSold(), ((CommissionReportItem)obj).GetDateTimeSold());
-            }
-
-            #endregion
-        }
-
         /// <summary>
-        /// Prints a summary of commission sales (type 6 items) between the specified dates
+        ///     Prints a summary of commission sales (type 6 items) between the specified dates
         /// </summary>
         /// <param name="sStartDate">The start date (DDMMYY) inclusive</param>
         /// <param name="sEndDate">The end date (DDMMYY) inclusive</param>
         public void CommissionSummaryReportToFile(string sStartDate, string sEndDate)
         {
             // Convert the start and end dates to DateTimes for easy comparison
-            DateTime dtStart = new DateTime(2000 + Convert.ToInt32(sStartDate[4].ToString() + sStartDate[5].ToString()),
-                                            Convert.ToInt32(sStartDate[2].ToString() + sStartDate[3].ToString()),
-                                            Convert.ToInt32(sStartDate[0].ToString() + sStartDate[1].ToString()));
-            DateTime dtEnd = new DateTime(2000 + Convert.ToInt32(sEndDate[4].ToString() + sEndDate[5].ToString()),
-                                            Convert.ToInt32(sEndDate[2].ToString() + sEndDate[3].ToString()),
-                                            Convert.ToInt32(sEndDate[0].ToString() + sEndDate[1].ToString()));
+            var dtStart = new DateTime(2000 + Convert.ToInt32(sStartDate[4].ToString() + sStartDate[5].ToString()),
+                Convert.ToInt32(sStartDate[2].ToString() + sStartDate[3].ToString()),
+                Convert.ToInt32(sStartDate[0].ToString() + sStartDate[1].ToString()));
+            var dtEnd = new DateTime(2000 + Convert.ToInt32(sEndDate[4].ToString() + sEndDate[5].ToString()),
+                Convert.ToInt32(sEndDate[2].ToString() + sEndDate[3].ToString()),
+                Convert.ToInt32(sEndDate[0].ToString() + sEndDate[1].ToString()));
 
             // Create a list of all records, and sort into date sold order
-            List<CommissionReportItem> lItems = new List<CommissionReportItem>();
+            var lItems = new List<CommissionReportItem>();
             for (int i = 0; i < tCommItems.NumberOfRecords; i++)
             {
                 if (tCommItems.GetRecordFrom(i)[7].Length == 6)
@@ -7454,18 +7164,22 @@ namespace BackOffice
 
             // Start the report
             TextWriter tWriter = new StreamWriter("REPORT.TXT");
-            tWriter.WriteLine("Commission Sales Summary between " + dtStart.ToShortDateString() + " and " + dtEnd.ToShortDateString());
+            tWriter.WriteLine("Commission Sales Summary between " + dtStart.ToShortDateString() + " and " +
+                              dtEnd.ToShortDateString());
 
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------------------------");
-            tWriter.WriteLine("Date         Item Description                Barcode        Artist                         Sold For      Cost    Profit       VAT  Gross Profit");
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "Date         Item Description                Barcode        Artist                         Sold For      Cost    Profit       VAT  Gross Profit");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------------------------");
 
             // The totals to add up
             decimal dTillTotal = 0;
             decimal dCostTotal = 0;
             decimal dNetProfitTotal = 0;
             decimal dVATTotal = 0;
-            
+
             // Now go through, and print out the report to a file
 
             for (int i = 0; i < lItems.Count; i++)
@@ -7529,7 +7243,9 @@ namespace BackOffice
                 sLine += sMoneyToAdd + " ";
 
                 // Gross Profit
-                sMoneyToAdd = FormatMoneyForDisplay(Convert.ToDecimal(lItems[i].GetRecordInfo()[8]) + Convert.ToDecimal(lItems[i].GetRecordInfo()[9]));
+                sMoneyToAdd =
+                    FormatMoneyForDisplay(Convert.ToDecimal(lItems[i].GetRecordInfo()[8]) +
+                                          Convert.ToDecimal(lItems[i].GetRecordInfo()[9]));
                 while (sMoneyToAdd.Length < 13)
                     sMoneyToAdd = " " + sMoneyToAdd;
                 sLine += sMoneyToAdd;
@@ -7537,7 +7253,8 @@ namespace BackOffice
                 tWriter.WriteLine(sLine);
             }
 
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------------------------");
             string sTotals = "Totals: ";
 
             string sSoldFor = FormatMoneyForDisplay(dTillTotal);
@@ -7566,20 +7283,21 @@ namespace BackOffice
             sTotals += sGrossProfit;
 
             tWriter.WriteLine(sTotals);
-            tWriter.WriteLine("-----------------------------------------------------------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "-----------------------------------------------------------------------------------------------------------------------------------------------");
             tWriter.Close();
         }
 
         public void CommissionSummaryReportToPrinter(string sStartDate, string sEndDate)
         {
             CommissionSummaryReportToFile(sStartDate, sEndDate);
-            sReportTitle = "Commission Sales Summary between " + sStartDate + " and " + sEndDate; 
+            sReportTitle = "Commission Sales Summary between " + sStartDate + " and " + sEndDate;
             nLineLastPrinted = 4;
             nPrinterPage = 1;
             rCurrentlyPrinting = ReportType.CommissionSummaryReport;
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DefaultPageSettings.Landscape = true;
             pPrinter.DocumentName = "Commission Sales Summary";
@@ -7588,7 +7306,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Prints a report detailing the sales & returns of items from a specific commissioner/artist
+        ///     Prints a report detailing the sales & returns of items from a specific commissioner/artist
         /// </summary>
         /// <param name="sComCode">The code of the artist</param>
         /// <param name="sStartDate">The date to start from (DDMMYY)</param>
@@ -7601,9 +7319,12 @@ namespace BackOffice
             tWriter.WriteLine();
             if (!bArtistPresent)
             {
-                tWriter.WriteLine("------------------------------------------------------------------------------------------------------");
-                tWriter.WriteLine("Item Barcode  Item Description             Item Number  Status   Price Sold At  Commission Due  Profit");
-                tWriter.WriteLine("------------------------------------------------------------------------------------------------------");
+                tWriter.WriteLine(
+                    "------------------------------------------------------------------------------------------------------");
+                tWriter.WriteLine(
+                    "Item Barcode  Item Description             Item Number  Status   Price Sold At  Commission Due  Profit");
+                tWriter.WriteLine(
+                    "------------------------------------------------------------------------------------------------------");
             }
             else
             {
@@ -7616,7 +7337,7 @@ namespace BackOffice
             string[,] sInfo = tCommItems.SearchAndGetAllMatchingRecords(0, sComCode, ref nOfRecords, true);
 
             // Get a list of all of the barcodes, and sort them into alphabetical order
-            List<string> lBarcodes = new List<string>();
+            var lBarcodes = new List<string>();
             for (int i = 0; i < nOfRecords; i++)
             {
                 if (!lBarcodes.Contains(sInfo[i, 1]))
@@ -7625,17 +7346,17 @@ namespace BackOffice
             lBarcodes.Sort();
 
             // Get 2 DateTimes, the start and end dates
-            DateTime dtStart = new DateTime(2000 + Convert.ToInt32(sStartDate[4].ToString() + sStartDate[5].ToString()),
-                                            Convert.ToInt32(sStartDate[2].ToString() + sStartDate[3].ToString()),
-                                            Convert.ToInt32(sStartDate[0].ToString() + sStartDate[1].ToString()));
-            DateTime dtEnd = new DateTime(2000 + Convert.ToInt32(sEndDate[4].ToString() + sEndDate[5].ToString()),
-                                            Convert.ToInt32(sEndDate[2].ToString() + sEndDate[3].ToString()),
-                                            Convert.ToInt32(sEndDate[0].ToString() + sEndDate[1].ToString()));
+            var dtStart = new DateTime(2000 + Convert.ToInt32(sStartDate[4].ToString() + sStartDate[5].ToString()),
+                Convert.ToInt32(sStartDate[2].ToString() + sStartDate[3].ToString()),
+                Convert.ToInt32(sStartDate[0].ToString() + sStartDate[1].ToString()));
+            var dtEnd = new DateTime(2000 + Convert.ToInt32(sEndDate[4].ToString() + sEndDate[5].ToString()),
+                Convert.ToInt32(sEndDate[2].ToString() + sEndDate[3].ToString()),
+                Convert.ToInt32(sEndDate[0].ToString() + sEndDate[1].ToString()));
 
 
             for (int i = 0; i < lBarcodes.Count; i++)
             {
-                List<int> lNumbers = new List<Int32>();
+                var lNumbers = new List<Int32>();
 
                 // Now calculate a list of item numbers, accounting for the possibility that the numbers may not start at1
                 // 1 and may have sumber numbers inbetween missing
@@ -7643,16 +7364,19 @@ namespace BackOffice
                 {
                     if (sInfo[x, 1] == lBarcodes[i])
                     {
-                        DateTime dtDealtDate = new DateTime();
+                        var dtDealtDate = new DateTime();
                         if (sInfo[x, 7] != "")
                         {
                             // Now check that this item number was dealt with between the specified dates
-                            dtDealtDate = new DateTime(2000 + Convert.ToInt32(sInfo[x, 7][4].ToString() + sInfo[x, 7][5].ToString()),
-                                                       Convert.ToInt32(sInfo[x, 7][2].ToString() + sInfo[x, 7][3].ToString()),
-                                                       Convert.ToInt32(sInfo[x, 7][0].ToString() + sInfo[x, 7][1].ToString()));
+                            dtDealtDate =
+                                new DateTime(
+                                    2000 + Convert.ToInt32(sInfo[x, 7][4].ToString() + sInfo[x, 7][5].ToString()),
+                                    Convert.ToInt32(sInfo[x, 7][2].ToString() + sInfo[x, 7][3].ToString()),
+                                    Convert.ToInt32(sInfo[x, 7][0].ToString() + sInfo[x, 7][1].ToString()));
                         }
                         // Check that the start and end dates create a range which the sold/returned date lies in
-                        if (sInfo[x, 7] == "" || (DateTime.Compare(dtStart, dtDealtDate) <= 0 && DateTime.Compare(dtDealtDate, dtEnd) <= 0))
+                        if (sInfo[x, 7] == "" ||
+                            (DateTime.Compare(dtStart, dtDealtDate) <= 0 && DateTime.Compare(dtDealtDate, dtEnd) <= 0))
                         {
                             // Add to the list of applicable items
                             lNumbers.Add(Convert.ToInt32(sInfo[x, 2]));
@@ -7744,7 +7468,6 @@ namespace BackOffice
                     }
 
                     tWriter.WriteLine(sLine);
-
                 }
             }
 
@@ -7772,16 +7495,18 @@ namespace BackOffice
                 dAmountOwed += dAmount;
                 tWriter.WriteLine(sLine);
             }*/
-            tWriter.WriteLine("----------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "----------------------------------------------------------------------------------------------");
             /*string sToWrite = "Total Due :";
             while (sToWrite.Length + FormatMoneyForDisplay(dAmountOwed).Length < 81)
                 sToWrite += " ";
             sToWrite += FormatMoneyForDisplay(dAmountOwed);
             tWriter.WriteLine(sToWrite);*/
             //tWriter.WriteLine("----------------------------------------------------------------------------------------------");
-           
+
             tWriter.Close();
         }
+
         public void ComissionReportToPrinter(string sComCode, string sStartDate, string sEndDate, bool bArtistPresent)
         {
             ComissionReportToFile(sComCode, sStartDate, sEndDate, bArtistPresent);
@@ -7789,10 +7514,10 @@ namespace BackOffice
             nLineLastPrinted = 1;
             nPrinterPage = 1;
             rCurrentlyPrinting = ReportType.ComissionReport;
-            PrinterSettings pSettings = new PrinterSettings();
+            var pSettings = new PrinterSettings();
 
-            PrintDocument pPrinter = new PrintDocument();
-            pSettings.PrinterName = this.PrinterToUse;
+            var pPrinter = new PrintDocument();
+            pSettings.PrinterName = PrinterToUse;
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Commission Report for " + GetCommissionerName(sComCode);
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -7826,7 +7551,8 @@ namespace BackOffice
                         nNum = 1000000;
                     if (nAttempts > 1000)
                     {
-                        System.Windows.Forms.MessageBox.Show("There are no auto-barcodes left free. There are only 1000 possible automatic codes available, in the range 1000000x to 1000999x, where x is a check digit");
+                        MessageBox.Show(
+                            "There are no auto-barcodes left free. There are only 1000 possible automatic codes available, in the range 1000000x to 1000999x, where x is a check digit");
                         return "";
                     }
                     nNum++;
@@ -7846,26 +7572,26 @@ namespace BackOffice
 
         public void AddQuantityOnOrder(string sBarcode, decimal dQuantity, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nRecNum = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
             string[] sMainStockInfo = tStockStats.GetRecordFrom(nRecNum);
             decimal dCurrentQty = Convert.ToDecimal(sMainStockInfo[3]);
             dCurrentQty += dQuantity;
             tStockStats.EditRecordData(nRecNum, 3, dCurrentQty.ToString());
             tStockStats.SaveToFile("STOCKSTA.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public void RemoveQuantityOnOrder(string sBarcode, decimal dQuantity, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             int nRecNum = tStockStats.GetRecordNumberFromTwoFields(sBarcode, 0, sShopCode, 35);
             string[] sMainStockInfo = tStockStats.GetRecordFrom(nRecNum);
             decimal dCurrentQty = Convert.ToDecimal(sMainStockInfo[3]);
             dCurrentQty -= dQuantity;
             tStockStats.EditRecordData(nRecNum, 3, dCurrentQty.ToString());
             tStockStats.SaveToFile("STOCKSTA.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public bool ReceiveComissionItem(string sBarcode, string sQty, string sShopCode)
@@ -7891,17 +7617,20 @@ namespace BackOffice
                     // Add : Commissioner code from mainstoc, the barcode, item number, artists fee from mainstock
                     //       retail price from mainstock, blank entry to mark that the item hasn't been sold or returned to the artist,
                     //       received date, blank entry for sold date, blank entry for VAT amount paid, blank entry for profit
-                    string[] toAdd = { tStock.GetRecordFrom(sBarcode, 0, true)[6],
-                                         sBarcode,
-                                         (i+1).ToString(),
-                                         tStock.GetRecordFrom(sBarcode, 0, true)[8],
-                                         tStock.GetRecordFrom(sBarcode, 0, true)[2],
-                                         " ",
-                                         sDay + sMonth + sYear,
-                                         "      ",
-                                         "0.00",
-                                         "0.00",
-                                         "0.00" };
+                    string[] toAdd =
+                    {
+                        tStock.GetRecordFrom(sBarcode, 0, true)[6],
+                        sBarcode,
+                        (i + 1).ToString(),
+                        tStock.GetRecordFrom(sBarcode, 0, true)[8],
+                        tStock.GetRecordFrom(sBarcode, 0, true)[2],
+                        " ",
+                        sDay + sMonth + sYear,
+                        "      ",
+                        "0.00",
+                        "0.00",
+                        "0.00"
+                    };
                     tCommItems.AddRecord(toAdd);
                 }
 
@@ -7927,7 +7656,7 @@ namespace BackOffice
         }
 
         /// <summary>
-        /// Tries to return the specified number of items
+        ///     Tries to return the specified number of items
         /// </summary>
         /// <param name="sBarcode">The product to try and return</param>
         /// <param name="dQtyToReturn">The quantity to attempt to return</param>
@@ -7936,7 +7665,7 @@ namespace BackOffice
         public decimal ReturnCommissionItems(string sBarcode, decimal dQtyToReturn, string sShopCode)
         {
             decimal dReturned = 0;
-            for (int x = (int)dQtyToReturn; x > 0; x--)
+            for (var x = (int) dQtyToReturn; x > 0; x--)
             {
                 int nLowestRecNum = -1;
                 int nLowestNumber = 999999;
@@ -7963,7 +7692,8 @@ namespace BackOffice
                     string sMonth = DateTime.Now.Month.ToString();
                     if (sMonth.Length < 2)
                         sMonth = "0" + sMonth;
-                    string sYear = DateTime.Now.Year.ToString()[2].ToString() + DateTime.Now.Year.ToString()[3].ToString();
+                    string sYear = DateTime.Now.Year.ToString()[2].ToString() +
+                                   DateTime.Now.Year.ToString()[3].ToString();
                     sDate += sMonth + sYear;
                     tCommItems.EditRecordData(nLowestRecNum, 5, "N");
                     tCommItems.EditRecordData(nLowestRecNum, 6, sDate);
@@ -7980,7 +7710,7 @@ namespace BackOffice
             tStockStats.SaveToFile("STOCKSTA.DBF");
             return dReturned;
         }
-            
+
 
         public string[,] GetSuggestedItemsForOrder(string sSupCode, string sShopCode, ref int nOfResults)
         {
@@ -7994,7 +7724,7 @@ namespace BackOffice
                 }
             }
             sSugRecs = sSugRecs.TrimEnd(',');
-            string[,] sToReturn = new string[sSugRecs.Split(',').Length, 2];
+            var sToReturn = new string[sSugRecs.Split(',').Length, 2];
             string[] sRecNums = sSugRecs.Split(',');
             nOfResults = sRecNums.Length;
             for (int i = 0; i < sRecNums.Length; i++)
@@ -8009,22 +7739,23 @@ namespace BackOffice
 
         public void RemoveSuggestedOrderItem(string sBarcode, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             for (int i = 0; i < tOrderSuggestions.NumberOfRecords; i++)
             {
-                if (tOrderSuggestions.GetRecordFrom(i)[0] == sBarcode && tOrderSuggestions.GetRecordFrom(i)[3] == sShopCode)
+                if (tOrderSuggestions.GetRecordFrom(i)[0] == sBarcode &&
+                    tOrderSuggestions.GetRecordFrom(i)[3] == sShopCode)
                 {
                     tOrderSuggestions.DeleteRecord(i);
                     i = -1;
                 }
             }
             tOrderSuggestions.SaveToFile("ORDERSUG.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public void AddSuggestedOrderItem(string sBarcode, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             if (GetMainStockInfo(sBarcode)[5] == "5")
             {
                 sBarcode = GetMainStockInfo(sBarcode)[7];
@@ -8041,15 +7772,16 @@ namespace BackOffice
             string sDate = sDay + sMonth + sYear;
             for (int i = 0; i < nOfResults; i++)
             {
-                string[] sToAdd = { sBarcode, sSuppliers[i, 1], sDate, sShopCode };
+                string[] sToAdd = {sBarcode, sSuppliers[i, 1], sDate, sShopCode};
                 tOrderSuggestions.AddRecord(sToAdd);
             }
             tOrderSuggestions.SaveToFile("ORDERSUG.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
+
         public void AddSuggestedOrderItem(string sBarcode, string sShopCode, string sDate)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             if (GetMainStockInfo(sBarcode)[5] == "5")
             {
                 sBarcode = GetMainStockInfo(sBarcode)[7];
@@ -8058,25 +7790,27 @@ namespace BackOffice
             string[,] sSuppliers = GetListOfSuppliersForItem(sBarcode, ref nOfResults);
             for (int i = 0; i < nOfResults; i++)
             {
-                string[] sToAdd = { sBarcode, sSuppliers[i, 1], sDate, sShopCode };
+                string[] sToAdd = {sBarcode, sSuppliers[i, 1], sDate, sShopCode};
                 tOrderSuggestions.AddRecord(sToAdd);
             }
             tOrderSuggestions.SaveToFile("ORDERSUG.DBF");
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
+
         public bool AnySuggestedItemsForSupplier(string sSupCode, string sShopCode)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             GetSuggestedItemsFromTills();
             for (int i = 0; i < tOrderSuggestions.NumberOfRecords; i++)
             {
-                if (tOrderSuggestions.GetRecordFrom(i)[1] == sSupCode && tOrderSuggestions.GetRecordFrom(i)[3] == sShopCode)
+                if (tOrderSuggestions.GetRecordFrom(i)[1] == sSupCode &&
+                    tOrderSuggestions.GetRecordFrom(i)[3] == sShopCode)
                 {
                     return true;
                 }
             }
             return false;
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public void GetSuggestedItemsFromTills()
@@ -8085,7 +7819,7 @@ namespace BackOffice
             {
                 if (File.Exists(Till[i].FileLocation + "\\TILL\\TORDERSU.DBF"))
                 {
-                    Table tOrderSugs = new Table(Till[i].FileLocation + "\\TILL\\TORDERSU.DBF");
+                    var tOrderSugs = new Table(Till[i].FileLocation + "\\TILL\\TORDERSU.DBF");
                     for (int x = 0; x < tOrderSugs.NumberOfRecords; x++)
                     {
                         string[] sRecord = tOrderSugs.GetRecordFrom(x);
@@ -8100,7 +7834,7 @@ namespace BackOffice
 
         public string[] GetListOfAccountCodes()
         {
-            string[] sToReturn = new string[tAccStat.NumberOfRecords];
+            var sToReturn = new string[tAccStat.NumberOfRecords];
             for (int i = 0; i < sToReturn.Length; i++)
             {
                 sToReturn[i] = tAccStat.GetRecordFrom(i)[0];
@@ -8134,14 +7868,15 @@ namespace BackOffice
             tAccStat.SaveToFile("ACCSTAT.DBF");
         }
 
-        public void AddItemToOrder(string sOrderNum, string sBarcode, string dOrderQty, string dRecQty, string sCostPrice)
+        public void AddItemToOrder(string sOrderNum, string sBarcode, string dOrderQty, string dRecQty,
+            string sCostPrice)
         {
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
             string[] sHeader = GetOrderHeader(sOrderNum);
-            string[] sBarcodes = new string[0];
-            string[] sCost = new string[0];
-            string[] sOrderQty = new string[0];
-            string[] sRecQty = new string[0];
+            var sBarcodes = new string[0];
+            var sCost = new string[0];
+            var sOrderQty = new string[0];
+            var sRecQty = new string[0];
             GetOrderData(sOrderNum, ref sBarcodes, ref sOrderQty, ref sRecQty, ref sCost);
             Array.Resize<string>(ref sBarcodes, sBarcodes.Length + 1);
             Array.Resize<string>(ref sCost, sCost.Length + 1);
@@ -8152,13 +7887,13 @@ namespace BackOffice
             sOrderQty[sOrderQty.Length - 1] = dOrderQty;
             sRecQty[sRecQty.Length - 1] = dRecQty;
             AddEditOrderData(sBarcodes, sOrderQty, sRecQty, sCost, sOrderNum);
-            this.FindMissingOrderLines();
+            FindMissingOrderLines();
         }
 
         public string[] GetListOfCardDiscs()
         {
             int nOfCards = GetCreditCards().Length;
-            string[] sDisc = new string[nOfCards];
+            var sDisc = new string[nOfCards];
             for (int i = 0; i < nOfCards; i++)
             {
                 int nRecNum = 0;
@@ -8188,7 +7923,7 @@ namespace BackOffice
             {
                 if (Convert.ToDecimal(sList[i]) != 0)
                 {
-                    string[] sToAdd = { "CRD" + (i).ToString() + "DISC", sList[i] };
+                    string[] sToAdd = {"CRD" + (i).ToString() + "DISC", sList[i]};
                     tSettings.AddRecord(sToAdd);
                 }
             }
@@ -8232,7 +7967,7 @@ namespace BackOffice
 
         public string[] GetListOfStaffMembers(string sShopCode)
         {
-            string[] sToReturn = new string[tStaff.NumberOfRecords];
+            var sToReturn = new string[tStaff.NumberOfRecords];
             int nSkipped = 0;
             for (int i = 0; i < tStaff.NumberOfRecords; i++)
             {
@@ -8252,7 +7987,7 @@ namespace BackOffice
                 int nRecNum = tStaff.GetRecordNumberFromTwoFields((i + 1).ToString(), 0, sShopCode, 1);
                 if (nRecNum != -1)
                     tStaff.DeleteRecord(nRecNum);
-                string[] sToAdd = { (i + 1).ToString(), sShopCode, sNames[i] };
+                string[] sToAdd = {(i + 1).ToString(), sShopCode, sNames[i]};
                 tStaff.AddRecord(sToAdd);
             }
             tStaff.SaveToFile("STAFF.DBF");
@@ -8265,17 +8000,17 @@ namespace BackOffice
         public void FixOnOrderQuantities()
         {
             int nCorrected = 0;
-            frmProgressBar fp = new frmProgressBar("Correcting Records");
+            var fp = new frmProgressBar("Correcting Records");
             fp.pb.Maximum = tStockStats.NumberOfRecords;
             fp.Show();
             for (int i = 0; i < tStockStats.NumberOfRecords; i++)
             {
                 fp.pb.Value = i;
-                System.Windows.Forms.Application.DoEvents();
+                Application.DoEvents();
                 string[] sStockSta = tStockStats.GetRecordFrom(i);
-                string[] sOrderNums = new string[0];
-                string[] sSupCodes = new string[0];
-                string[] sQuantities = new string[0];
+                var sOrderNums = new string[0];
+                var sSupCodes = new string[0];
+                var sQuantities = new string[0];
                 GetOrdersWithItemOutstandingIn(sStockSta[0], ref sOrderNums, ref sSupCodes, ref sQuantities);
                 decimal dQtyOnOrder = 0;
                 for (int x = 0; x < sOrderNums.Length; x++)
@@ -8296,7 +8031,7 @@ namespace BackOffice
             }
             tStockStats.SaveToFile("STOCKSTA.DBF");
             fp.Close();
-            System.Windows.Forms.MessageBox.Show("Corrected " + nCorrected.ToString() + " records!");
+            MessageBox.Show("Corrected " + nCorrected.ToString() + " records!");
         }
 
         public void SendCommandsToTill(string[] sCommands)
@@ -8318,21 +8053,8 @@ namespace BackOffice
 
         public void SendCommandToTill(string sCommand)
         {
-            string[] sToSend = { sCommand };
+            string[] sToSend = {sCommand};
             SendCommandsToTill(sToSend);
-        }
-
-        string sLastCatCode = "";
-        public string LastCategoryCode
-        {
-            get
-            {
-                return sLastCatCode;
-            }
-            set
-            {
-                sLastCatCode = value;
-            }
         }
 
         public void CollectEmailsFromTills()
@@ -8341,7 +8063,7 @@ namespace BackOffice
             {
                 if (File.Exists(Till[i].FileLocation + "\\TILL\\EMAILS.DBF"))
                 {
-                    Table tTillEmail = new Table(Till[i].FileLocation + "\\TILL\\EMAILS.DBF");
+                    var tTillEmail = new Table(Till[i].FileLocation + "\\TILL\\EMAILS.DBF");
                     while (tTillEmail.NumberOfRecords > 0)
                     {
                         tEmails.AddRecord(tTillEmail.GetRecordFrom(0));
@@ -8353,7 +8075,8 @@ namespace BackOffice
             tEmails.SaveToFile(sTDir + "EMAILS.DBF");
         }
 
-        public void GetEmailAddresses(ref string[] sTitles, ref string[] sForeNames, ref string[] sSurNames, ref string[] sEmails, ref string[] sDates)
+        public void GetEmailAddresses(ref string[] sTitles, ref string[] sForeNames, ref string[] sSurNames,
+            ref string[] sEmails, ref string[] sDates)
         {
             sTitles = new string[tEmails.NumberOfRecords];
             sForeNames = new string[tEmails.NumberOfRecords];
@@ -8372,100 +8095,6 @@ namespace BackOffice
             }
         }
 
-        public enum SortOrder {Barcode, QIS, OutOfStock, AvgSales};
-        private class OutOfStockReportItem : IComparable
-        {
-            string[] stockStaRecord;
-            string[] mainStockRecord;
-            string[] stockLengthRecord;
-            SortOrder sortOrder;
-
-            public OutOfStockReportItem(string[] stockStaRecord, string[] mainStockRecord, string[] stockLengthRecord)
-            {
-                this.stockStaRecord = stockStaRecord;
-                this.mainStockRecord = mainStockRecord;
-                this.stockLengthRecord = stockLengthRecord;
-            }
-
-            public SortOrder SortOrder
-            {
-                get
-                {
-                    return this.sortOrder;
-                }
-                set
-                {
-                    this.sortOrder = value;
-                }
-            }
-
-            public string Barcode
-            {
-                get
-                {
-                    return stockStaRecord[0];
-                }
-            }
-
-            public decimal QIS
-            {
-                get
-                {
-                    return Convert.ToDecimal(stockStaRecord[36]);
-                }
-            }
-
-            public decimal AverageSales
-            {
-                get
-                {
-                    return Convert.ToDecimal(stockStaRecord[2]);
-                }
-            }
-
-            public decimal PercentageOutOfStock
-            {
-                get
-                {
-                    decimal dTotal = Convert.ToDecimal(stockLengthRecord[2]);
-                    decimal dOut = Convert.ToDecimal(stockLengthRecord[3]);
-
-                    decimal dPercentage = (100/dTotal) * dOut;
-                    return Math.Round(dPercentage, 2);
-                }
-            }
-
-            public string Description
-            {
-                get
-                {
-                    return mainStockRecord[1];
-                }
-            }
-        
-            public int  CompareTo(object obj)
-            {
-                OutOfStockReportItem iItem = (OutOfStockReportItem)obj;
-                switch (this.sortOrder)
-                {
-                    case SortOrder.Barcode:
-                        return String.Compare(iItem.Barcode, this.Barcode);
-                        break;
-                    case SortOrder.AvgSales:
-                        return Decimal.Compare(iItem.AverageSales, this.AverageSales);
-                        break;
-                    case SortOrder.OutOfStock:
-                        return Decimal.Compare(iItem.PercentageOutOfStock, this.PercentageOutOfStock);
-                        break;
-                    case SortOrder.QIS:
-                        return Decimal.Compare(iItem.QIS, this.QIS);
-                        break;
-                }
-                return 0;
-            }
-
-        }
-
         public void OutOfStockReportToPrinter(string sCategoryCode, string sShopCode, SortOrder order)
         {
             OutOfStockReportToFile(sCategoryCode, sShopCode, order);
@@ -8473,9 +8102,9 @@ namespace BackOffice
             nPrinterPage = 1;
             sReportTitle = "Out Of Stock Length Report for Items in Category " + GetCategoryDesc(sCategoryCode);
             rCurrentlyPrinting = ReportType.OutOfStockLengthReport;
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Out Of Stock Length Report for Items in Category " + GetCategoryDesc(sCategoryCode);
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -8486,17 +8115,22 @@ namespace BackOffice
         {
             TextWriter tWriter = new StreamWriter("REPORT.TXT", false);
             string sDash = "-";
-            while (sDash.Length < ("Out Of Stock Length Report for Items in Category " + GetCategoryDesc(sCategoryCode)).ToString().Length)
+            while (sDash.Length <
+                   ("Out Of Stock Length Report for Items in Category " + GetCategoryDesc(sCategoryCode)).ToString()
+                       .Length)
                 sDash += "-";
             tWriter.WriteLine(sDash);
             tWriter.WriteLine("Out Of Stock Length Report for Items in Category " + GetCategoryDesc(sCategoryCode));
             tWriter.WriteLine(sDash);
 
-            tWriter.WriteLine("-------------------------------------------------------------------------------------------");
-            tWriter.WriteLine("Barcode        Description                     Q.I.S    Out Of Stock      Average Sales/Day");
-            tWriter.WriteLine("-------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "-------------------------------------------------------------------------------------------");
+            tWriter.WriteLine(
+                "Barcode        Description                     Q.I.S    Out Of Stock      Average Sales/Day");
+            tWriter.WriteLine(
+                "-------------------------------------------------------------------------------------------");
 
-            string[] sBarcodes = this.GetCodesOfItemsInCategory(sCategoryCode, true);
+            string[] sBarcodes = GetCodesOfItemsInCategory(sCategoryCode, true);
             int nToSkip = 0;
             for (int i = 0; i < sBarcodes.Length; i++)
             {
@@ -8509,7 +8143,7 @@ namespace BackOffice
 
             int nSkipped = 0;
 
-            OutOfStockReportItem[] oItems = new OutOfStockReportItem[sBarcodes.Length - nToSkip];
+            var oItems = new OutOfStockReportItem[sBarcodes.Length - nToSkip];
             for (int i = 0; i < sBarcodes.Length; i++)
             {
                 if (sBarcodes[i] == null)
@@ -8519,11 +8153,13 @@ namespace BackOffice
                 }
                 int nStockStats = tStockStats.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sShopCode, 35);
                 if (nStockStats == -1)
-                    throw new Exception("Trying to find " + sBarcodes[i] + " in stockstats (shop " + sShopCode + ", but it's not there!");
+                    throw new Exception("Trying to find " + sBarcodes[i] + " in stockstats (shop " + sShopCode +
+                                        ", but it's not there!");
 
                 int nStockLength = tStockLength.GetRecordNumberFromTwoFields(sBarcodes[i], 0, sShopCode, 1);
-                 oItems[i-nSkipped] = new OutOfStockReportItem(tStockStats.GetRecordFrom(nStockStats), tStock.GetRecordFrom(sBarcodes[i], 0, true), tStockLength.GetRecordFrom(nStockLength));
-                oItems[i-nSkipped].SortOrder = order;
+                oItems[i - nSkipped] = new OutOfStockReportItem(tStockStats.GetRecordFrom(nStockStats),
+                    tStock.GetRecordFrom(sBarcodes[i], 0, true), tStockLength.GetRecordFrom(nStockLength));
+                oItems[i - nSkipped].SortOrder = order;
             }
 
             Array.Sort(oItems);
@@ -8557,10 +8193,9 @@ namespace BackOffice
         }
 
 
-
         public void OutStandingItemsToFile(string sSupCode)
         {
-            frmProgressBar fp = new frmProgressBar("Creating Outstanding Report");
+            var fp = new frmProgressBar("Creating Outstanding Report");
             fp.pb.Maximum = tOrder.NumberOfRecords;
             fp.Show();
             tOrder.SortTable();
@@ -8593,8 +8228,11 @@ namespace BackOffice
                                 {
                                     tWriter.WriteLine("-------------------------------------------");
                                     string sDate = tOrder.GetRecordFrom(x)[5];
-                                    string sFormatted = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
-                                    tWriter.WriteLine("Order Number " + tOrder.GetRecordFrom(x)[0] + ". Ordered : " + sFormatted);
+                                    string sFormatted = sDate[0].ToString() + sDate[1].ToString() + "/" +
+                                                        sDate[2].ToString() + sDate[3].ToString() + "/" +
+                                                        sDate[4].ToString() + sDate[5].ToString();
+                                    tWriter.WriteLine("Order Number " + tOrder.GetRecordFrom(x)[0] + ". Ordered : " +
+                                                      sFormatted);
                                     tWriter.WriteLine("--------------------------------------------");
                                     bWrittenTitle = true;
                                 }
@@ -8610,7 +8248,7 @@ namespace BackOffice
                                 while (sToWrite.Length + FormatMoneyForDisplay(dQtyOrdered - dQtyReceieved).Length < 68)
                                     sToWrite += " ";
                                 sToWrite += FormatMoneyForDisplay(dQtyOrdered - dQtyReceieved);
-                                decimal dCost = Convert.ToDecimal(sResults[i, 5]) * (dQtyOrdered - dQtyReceieved);
+                                decimal dCost = Convert.ToDecimal(sResults[i, 5])*(dQtyOrdered - dQtyReceieved);
                                 while (sToWrite.Length + FormatMoneyForDisplay(dCost).Length < 78)
                                     sToWrite += " ";
                                 sToWrite += FormatMoneyForDisplay(dCost);
@@ -8625,10 +8263,12 @@ namespace BackOffice
                         while (sTotalLine.Length + "Total : ".Length + FormatMoneyForDisplay(dTotal).Length < 78)
                             sTotalLine += " ";
                         sTotalLine += "Total : " + FormatMoneyForDisplay(dTotal);
-                        tWriter.WriteLine("------------------------------------------------------------------------------");
+                        tWriter.WriteLine(
+                            "------------------------------------------------------------------------------");
                         tWriter.WriteLine(sTotalLine);
-                        tWriter.WriteLine("------------------------------------------------------------------------------");
-                        tWriter.WriteLine(""); 
+                        tWriter.WriteLine(
+                            "------------------------------------------------------------------------------");
+                        tWriter.WriteLine("");
                     }
                 }
             }
@@ -8644,9 +8284,9 @@ namespace BackOffice
             nPrinterPage = 1;
             sReportTitle = "Outstanding items from " + GetSupplierDetails(sSupCode)[1];
             rCurrentlyPrinting = ReportType.OutStandingItems;
-            PrinterSettings pSettings = new PrinterSettings();
-            pSettings.PrinterName = this.PrinterToUse;
-            PrintDocument pPrinter = new PrintDocument();
+            var pSettings = new PrinterSettings();
+            pSettings.PrinterName = PrinterToUse;
+            var pPrinter = new PrintDocument();
             pPrinter.PrinterSettings = pSettings;
             pPrinter.DocumentName = "Outstanding Items from " + GetSupplierDetails(sSupCode)[1];
             pPrinter.PrintPage += new PrintPageEventHandler(ReportPrintPage);
@@ -8680,7 +8320,8 @@ namespace BackOffice
                     }
                     catch
                     {
-                        System.Windows.Forms.MessageBox.Show("Can't access Till " + Till[i].Number.ToString() + ", so it won't be updated this time.");
+                        MessageBox.Show("Can't access Till " + Till[i].Number.ToString() +
+                                        ", so it won't be updated this time.");
                     }
                 }
                 File.Delete("Update\\GTILL.EXE");
@@ -8688,11 +8329,10 @@ namespace BackOffice
             }
         }
 
-       
 
         public bool[] TillsConnected(ref int[] sCodes)
         {
-            bool[] bToReturn = new bool[Till.Length];
+            var bToReturn = new bool[Till.Length];
             sCodes = new int[Till.Length];
             for (int i = 0; i < Till.Length; i++)
             {
@@ -8741,7 +8381,7 @@ namespace BackOffice
             }
             nOddSum *= 3;
             nOddSum += nEvenSum;
-            nOddSum = 10 - (nOddSum % 10);
+            nOddSum = 10 - (nOddSum%10);
             return sBarcode + nOddSum.ToString()[nOddSum.ToString().Length - 1];
         }
 
@@ -8767,7 +8407,7 @@ namespace BackOffice
         {
             if (!GotEmailSupportAddress())
             {
-                string[] sToAdd = { "EmailAddress", sNewAddress };
+                string[] sToAdd = {"EmailAddress", sNewAddress};
                 tSettings.AddRecord(sToAdd);
                 tSettings.SaveToFile("SETTINGS.DBF");
             }
@@ -8776,52 +8416,6 @@ namespace BackOffice
                 int nRecNum = 0;
                 tSettings.SearchForRecord("EmailAddress", 0, ref nRecNum);
                 tSettings.EditRecordData(nRecNum, 1, sNewAddress);
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
-        public string PrinterToUse
-        {
-            get
-            {
-                string[] setting = tSettings.GetRecordFrom("PRINTER", 0, true);
-                bool defaultExists = false;
-                if (setting.Length > 1)
-                {
-                    for (int i = 0; i < PrinterSettings.InstalledPrinters.Count; i++)
-                    {
-                        if (setting[1].Equals(PrinterSettings.InstalledPrinters[i]))
-                        {
-                            defaultExists = true;
-                            return setting[1];
-                        }
-                    }
-                }
-                
-                if (!defaultExists)
-                {
-                    PrinterSettings pSettings = new PrinterSettings();
-                    for (int i = 0; i < PrinterSettings.InstalledPrinters.Count; i++)
-                    {
-                        pSettings.PrinterName = PrinterSettings.InstalledPrinters[i];
-                        if (pSettings.IsDefaultPrinter)
-                            return pSettings.PrinterName;
-                    }
-                }
-                return "Unknown";
-            }
-
-            set
-            {
-                int settingLoc = -1;
-                tSettings.SearchForRecord("PRINTER", 0, ref settingLoc);
-                if (settingLoc != -1)
-                {
-                    tSettings.DeleteRecord(settingLoc);
-                }
-
-                string[] newSetting = { "PRINTER", value };
-                tSettings.AddRecord(newSetting);
                 tSettings.SaveToFile("SETTINGS.DBF");
             }
         }
@@ -8856,7 +8450,7 @@ namespace BackOffice
             dOldVATRate += 1;
             dNewVATRate /= 100;
             dNewVATRate += 1;
-            frmProgressBar fpBar = new frmProgressBar("Changing VAT Rate");
+            var fpBar = new frmProgressBar("Changing VAT Rate");
             fpBar.Show();
             fpBar.pb.Maximum = tStock.NumberOfRecords;
             for (int i = 0; i < tStock.NumberOfRecords; i++)
@@ -8866,9 +8460,9 @@ namespace BackOffice
                     decimal dCurrentPrice = Convert.ToDecimal(tStock.GetRecordFrom(i)[2]);
                     dCurrentPrice /= dOldVATRate;
                     dCurrentPrice *= dNewVATRate;
-                    tStock.EditRecordData(i, 2, Math.Round(dCurrentPrice,2).ToString());
+                    tStock.EditRecordData(i, 2, Math.Round(dCurrentPrice, 2).ToString());
                 }
-                fpBar.pb.Value= i;
+                fpBar.pb.Value = i;
             }
             tStock.SaveToFile("MAINSTOC.DBF");
             fpBar.Close();
@@ -8885,10 +8479,11 @@ namespace BackOffice
         public void FixEndOfYearBug()
         {
             string sFolderName = Directory.GetDirectories("Archive\\Yearly")[0].ToString();
-            Table tOldYear = new Table(sFolderName + "\\STOCKSTA.DBF");
+            var tOldYear = new Table(sFolderName + "\\STOCKSTA.DBF");
             for (int i = 0; i < tOldYear.NumberOfRecords; i++)
             {
-                int nLoc = tStockStats.GetRecordNumberFromTwoFields(tOldYear.GetRecordFrom(i)[0], 0, tOldYear.GetRecordFrom(i)[tOldYear.FieldNumber("SHOPCODE")], tOldYear.FieldNumber("SHOPCODE"));
+                int nLoc = tStockStats.GetRecordNumberFromTwoFields(tOldYear.GetRecordFrom(i)[0], 0,
+                    tOldYear.GetRecordFrom(i)[tOldYear.FieldNumber("SHOPCODE")], tOldYear.FieldNumber("SHOPCODE"));
                 tStockStats.EditRecordData(nLoc, 25, tOldYear.GetRecordFrom(i)[17]);
                 tStockStats.EditRecordData(nLoc, 26, tOldYear.GetRecordFrom(i)[18]);
                 tStockStats.EditRecordData(nLoc, 27, tOldYear.GetRecordFrom(i)[19]);
@@ -8899,14 +8494,17 @@ namespace BackOffice
 
         public void FixAverageCostZeroBug(string sStockStaFile, string sMainStockFile)
         {
-            Table tStockStaToFix = new Table(sStockStaFile);
-            Table tMainStockToFix = new Table(sMainStockFile);
+            var tStockStaToFix = new Table(sStockStaFile);
+            var tMainStockToFix = new Table(sMainStockFile);
 
             for (int i = 0; i < tStockStaToFix.NumberOfRecords; i++)
             {
-                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) == 0 && Convert.ToDecimal(tMainStockToFix.GetRecordFrom(tStockStaToFix.GetRecordFrom(i)[0], 0, true)[8]) != 0)
+                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) == 0 &&
+                    Convert.ToDecimal(tMainStockToFix.GetRecordFrom(tStockStaToFix.GetRecordFrom(i)[0], 0, true)[8]) !=
+                    0)
                 {
-                    tStockStaToFix.EditRecordData(i, 1, tMainStockToFix.GetRecordFrom(tStockStaToFix.GetRecordFrom(i)[0], 0, true)[8]);
+                    tStockStaToFix.EditRecordData(i, 1,
+                        tMainStockToFix.GetRecordFrom(tStockStaToFix.GetRecordFrom(i)[0], 0, true)[8]);
                 }
             }
             tStockStaToFix.SaveToFile(sStockStaFile);
@@ -8914,33 +8512,49 @@ namespace BackOffice
 
         public void FixCOGSZeroBug(string sStockStaFile)
         {
-            Table tStockStaToFix = new Table(sStockStaFile);
+            var tStockStaToFix = new Table(sStockStaFile);
 
             for (int i = 0; i < tStockStaToFix.NumberOfRecords; i++)
             {
                 // Daily
-                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[5]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[8]) == 0)
+                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[5]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[8]) == 0)
                 {
                     // Faulty Item
-                    tStockStaToFix.EditRecordData(i, 8, (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) * Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[5])).ToString());
+                    tStockStaToFix.EditRecordData(i, 8,
+                        (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1])*
+                         Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[5])).ToString());
                 }
                 // Weekly
-                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[9]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[12]) == 0)
+                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[9]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[12]) == 0)
                 {
                     // Faulty Item
-                    tStockStaToFix.EditRecordData(i, 12, (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) * Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[9])).ToString());
+                    tStockStaToFix.EditRecordData(i, 12,
+                        (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1])*
+                         Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[9])).ToString());
                 }
                 // Monthly
-                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[13]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[16]) == 0)
+                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[13]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[16]) == 0)
                 {
                     // Faulty Item
-                    tStockStaToFix.EditRecordData(i, 16, (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) * Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[13])).ToString());
+                    tStockStaToFix.EditRecordData(i, 16,
+                        (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1])*
+                         Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[13])).ToString());
                 }
                 // Yearly
-                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[17]) != 0 && Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[20]) == 0)
+                if (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[17]) != 0 &&
+                    Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[20]) == 0)
                 {
                     // Faulty Item
-                    tStockStaToFix.EditRecordData(i, 20, (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1]) * Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[17])).ToString());
+                    tStockStaToFix.EditRecordData(i, 20,
+                        (Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[1])*
+                         Convert.ToDecimal(tStockStaToFix.GetRecordFrom(i)[17])).ToString());
                 }
             }
 
@@ -8952,7 +8566,7 @@ namespace BackOffice
             // Let's do this
 
             // First, get a list of all items whose average cost is zero when it shouldn't be
-            List<String> sFaultyItems = new List<string>();
+            var sFaultyItems = new List<string>();
 
             for (int i = 0; i < tStockStats.NumberOfRecords; i++)
             {
@@ -8966,7 +8580,6 @@ namespace BackOffice
                     sFaultyItems.Add(tStockStats.GetRecordFrom(i)[0]);
                     Console.WriteLine(tStockStats.GetRecordFrom(i)[0]);
                 }
-                
             }
 
             // Now we've got a list of faulty barcodes
@@ -8975,7 +8588,7 @@ namespace BackOffice
             // This can be checked by looking at the first Archive of 2011, and seeing if the average cost was 0 then
             // If it was, then remove the code from the list of faulty ones
 
-            Table tFirstOfTheYear = new Table("Archive\\Daily\\2011.01.04\\STOCKSTA.DBF");
+            var tFirstOfTheYear = new Table("Archive\\Daily\\2011.01.04\\STOCKSTA.DBF");
 
             for (int i = 0; i < sFaultyItems.Count; i++)
             {
@@ -9017,7 +8630,9 @@ namespace BackOffice
             {
                 int nRecNum = -1;
                 tStockStats.SearchForRecord(sFaultyItems[i], 0, ref nRecNum);
-                if (Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[17]) * Convert.ToDecimal(tStock.GetRecordFrom(sFaultyItems[i], 0, true)[8]) == Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[20]))
+                if (Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[17])*
+                    Convert.ToDecimal(tStock.GetRecordFrom(sFaultyItems[i], 0, true)[8]) ==
+                    Convert.ToDecimal(tStockStats.GetRecordFrom(nRecNum)[20]))
                 {
                     tStockStats.EditRecordData(nRecNum, 1, tStock.GetRecordFrom(sFaultyItems[i], 0, true)[8]);
                     tStockStats.SaveToFile("STOCKSTA.DBF");
@@ -9034,7 +8649,6 @@ namespace BackOffice
             }
             tWriter.Close();
 
-           
 
             Console.WriteLine("That leaves... {0} items to remove!", sFaultyItems.Count);
 
@@ -9053,7 +8667,7 @@ namespace BackOffice
                 int nOfDaysMissed = 0;
 
                 string sDateBeforeChanged = "";
-                DateTime dtDateBeforeChanged = new DateTime(1, 1, 1);
+                var dtDateBeforeChanged = new DateTime(1, 1, 1);
                 decimal dAverageCost = 0;
                 decimal dQuantityReceived = 0;
                 decimal dYearlyDelCost = 0;
@@ -9091,7 +8705,7 @@ namespace BackOffice
                         //Console.Write("Checking " + sDirToSearchFor + " for " + sFaultyItems[i] + " change");
 
                         // Load the stocksta table from that day
-                        Table tTempStockSta = new Table(sDirToSearchFor + "\\STOCKSTA.DBF");
+                        var tTempStockSta = new Table(sDirToSearchFor + "\\STOCKSTA.DBF");
                         int nRecNum = -1;
                         // Check to see if the item actually exists
                         if (tTempStockSta.SearchForRecord(sFaultyItems[i], 0, ref nRecNum))
@@ -9100,7 +8714,8 @@ namespace BackOffice
                             // Check to see if average is 0.00
                             if (Convert.ToDecimal(tTempStockSta.GetRecordFrom(nRecNum)[1]) != 0)
                             {
-                                Console.WriteLine("Found the date that {0} changed, it was {1}", sFaultyItems[i], sDirToSearchFor);
+                                Console.WriteLine("Found the date that {0} changed, it was {1}", sFaultyItems[i],
+                                    sDirToSearchFor);
                                 // The average wasn't 0, record the date, average cost, quantity received to date this year, and stop searching
                                 sDateBeforeChanged = sDirToSearchFor;
                                 dtDateBeforeChanged = dtCurrent;
@@ -9167,8 +8782,8 @@ namespace BackOffice
                             nDaysMissed = 0;
 
                             // Load the table
-                            Table tTemp = new Table(sDirToSearchFor + "\\STOCKSTA.DBF");
-                            
+                            var tTemp = new Table(sDirToSearchFor + "\\STOCKSTA.DBF");
+
                             // Check that the item exists 
                             int nRecNum = -1;
                             if (tTemp.SearchForRecord(sFaultyItems[i], 0, ref nRecNum))
@@ -9182,13 +8797,13 @@ namespace BackOffice
                                 {
                                     Console.WriteLine("Quantities aren't the same");
                                     // Some items have been received, work out the new average
-                                    
+
                                     // Work out how many were received today
                                     decimal dQtyReceived = dTodayQtyRecd - dQuantityReceived;
 
                                     // Get their cost from the last cost field in mainstock
                                     decimal dLastCost = 0;
-                                    Table tMainStockTemp = new Table(sDirToSearchFor + "\\MAINSTOC.DBF");
+                                    var tMainStockTemp = new Table(sDirToSearchFor + "\\MAINSTOC.DBF");
                                     int nMSRecNum = -1;
                                     if (tMainStockTemp.SearchForRecord(sFaultyItems[i], 0, ref nMSRecNum))
                                     {
@@ -9207,28 +8822,34 @@ namespace BackOffice
 
                                     decimal dPrevAverage = dAverageCost;
                                     // Work out the new average cost
-                                    dAverageCost = Math.Round(((dQtyInStock * dAverageCost) + (dLastCost * dQtyReceived)) / (dQtyReceived + dQtyInStock), 2, MidpointRounding.AwayFromZero);
+                                    dAverageCost =
+                                        Math.Round(
+                                            ((dQtyInStock*dAverageCost) + (dLastCost*dQtyReceived))/
+                                            (dQtyReceived + dQtyInStock), 2, MidpointRounding.AwayFromZero);
 
                                     // Record the new average cost to the database
                                     tTemp.EditRecordData(nRecNum, 1, dAverageCost.ToString());
 
                                     // Need to calculate the yearly delivery cost and record it
-                                    dYearlyDelCost += Math.Round(dLastCost * dQtyReceived, 2);
+                                    dYearlyDelCost += Math.Round(dLastCost*dQtyReceived, 2);
                                     tTemp.EditRecordData(nRecNum, 24, dYearlyDelCost.ToString());
 
-                                    
 
-                                    Console.WriteLine("Some {0} were recevied - Previous Average {1}, Previous QIS {2}, New QIS {3}, New Average {4}", sFaultyItems[i], dPrevAverage.ToString(), dQtyInStock.ToString(), (dQtyInStock + dQtyReceived).ToString(), dAverageCost.ToString());
+                                    Console.WriteLine(
+                                        "Some {0} were recevied - Previous Average {1}, Previous QIS {2}, New QIS {3}, New Average {4}",
+                                        sFaultyItems[i], dPrevAverage.ToString(), dQtyInStock.ToString(),
+                                        (dQtyInStock + dQtyReceived).ToString(), dAverageCost.ToString());
                                     dQuantityReceived = dTodayQtyRecd;
                                 }
 
                                 // Now check if any have sold, and if so, increase the YCOGS by the average * qty sold
                                 decimal dQtySold = Convert.ToDecimal(tTemp.GetRecordFrom(nRecNum)[5]);
-                                dYearlyCOGS += Math.Round(dQtySold * dAverageCost, 2);
+                                dYearlyCOGS += Math.Round(dQtySold*dAverageCost, 2);
                                 tTemp.EditRecordData(nRecNum, 20, dYearlyCOGS.ToString());
 
-                                Console.WriteLine("{0}x {1} sold on {2}, YCOGS increased by {3} to {4}", dQtySold.ToString(), sFaultyItems[i], dtDateBeforeChanged.ToString(), (dQtySold * dAverageCost).ToString(), dYearlyCOGS.ToString());
-
+                                Console.WriteLine("{0}x {1} sold on {2}, YCOGS increased by {3} to {4}",
+                                    dQtySold.ToString(), sFaultyItems[i], dtDateBeforeChanged.ToString(),
+                                    (dQtySold*dAverageCost).ToString(), dYearlyCOGS.ToString());
 
 
                                 // Save the table
@@ -9239,9 +8860,7 @@ namespace BackOffice
                                 // Item not found
                                 throw new Exception("Some bad programming going on here");
                             }
-                            
                         }
-
                     }
 
                     // Now that all of the archives have been updated, update the current STOCKSTA
@@ -9269,34 +8888,7 @@ namespace BackOffice
             }
         }
 
-        public string GetLastVersion
-        {
-            get
-            {
-                if (tSettings.SearchForRecord("LASTVER", "SETTINGNAM"))
-                {
-                    return tSettings.GetRecordFrom("LASTVER", 0)[1];
-                }
-                else
-                {
-                    return "";
-                }
-            }
-            set
-            {
-                int nRecNum = 0;
-                tSettings.SearchForRecord("LASTVER", 0, ref nRecNum);
-                if (nRecNum != -1)
-                {
-                    tSettings.DeleteRecord(nRecNum);
-                }
-                string[] sToadd = { "LASTVER", value };
-                tSettings.AddRecord(sToadd);
-                tSettings.SaveToFile("SETTINGS.DBF");
-            }
-        }
-
-        void CheckForVersionChange()
+        private void CheckForVersionChange()
         {
             if (File.Exists("buildNum.txt"))
             {
@@ -9305,10 +8897,10 @@ namespace BackOffice
                 string version = current.Split(' ')[1];
                 tReader.Close();
 
-                if (version != this.GetLastVersion)
+                if (version != GetLastVersion)
                 {
                     // Do something
-                    this.GetLastVersion = version;
+                    GetLastVersion = version;
                 }
             }
         }
@@ -9325,7 +8917,10 @@ namespace BackOffice
                 }
                 catch
                 {
-                    frmSingleInputBox fsi = new frmSingleInputBox("Price for " + tStock.GetRecordFrom(i)[0] + " - " + tStock.GetRecordFrom(i)[1] + " is " + tStock.GetRecordFrom(i)[2] + " which is invalid. Enter the correct price:", ref sEngine);
+                    var fsi =
+                        new frmSingleInputBox(
+                            "Price for " + tStock.GetRecordFrom(i)[0] + " - " + tStock.GetRecordFrom(i)[1] + " is " +
+                            tStock.GetRecordFrom(i)[2] + " which is invalid. Enter the correct price:", ref sEngine);
                     fsi.Width = fsi.Width + 150;
                     fsi.ShowDialog();
                     if (fsi.Response != "$NONE")
@@ -9335,25 +8930,7 @@ namespace BackOffice
                 }
             }
             tStock.SaveToFile("MAINSTOC.DBF");
-            System.Windows.Forms.MessageBox.Show("Finished!");
-        }
-
-        public bool AllowDatabaseSaves
-        {
-            get
-            {
-                bool bAllowed = false;
-                if (tStock.PreventFromSaving)
-                    bAllowed = true;
-                if (tStockStats.PreventFromSaving)
-                    bAllowed = true;
-                return bAllowed;
-            }
-            set
-            {
-                tStock.PreventFromSaving = value;
-                tStockStats.PreventFromSaving = value;
-            }
+            MessageBox.Show("Finished!");
         }
 
         public void SaveStockDatabases()
@@ -9366,33 +8943,32 @@ namespace BackOffice
 
         public void AddSerialNumber(string sBarcode, string sSerial)
         {
-            string[] sToAdd = { sBarcode, sSerial, "NO" };
+            string[] sToAdd = {sBarcode, sSerial, "NO"};
             tSerials.AddRecord(sToAdd);
             tSerials.SaveToFile("SERIALS.DBF");
         }
 
         public void MigrateToNewSupplierDatabase()
         {
-            
-            frmProgressBar fp = new frmProgressBar("Migrating Database");
-            
-            Table tOldSupp = new Table("SUPPLIER.DBF");
+            var fp = new frmProgressBar("Migrating Database");
+
+            var tOldSupp = new Table("SUPPLIER.DBF");
             if (tOldSupp.GetRecordFrom(0).Length == 16)
             {
                 return;
             }
             fp.pb.Value = 0;
             fp.pb.Maximum = tOldSupp.NumberOfRecords;
-            FileStream fs = new FileStream("SUPPLIER.DBF", FileMode.OpenOrCreate);
-            fs.Write(Properties.Resources.NEWSUPPL, 0, Properties.Resources.NEWSUPPL.Length);
+            var fs = new FileStream("SUPPLIER.DBF", FileMode.OpenOrCreate);
+            fs.Write(Resources.NEWSUPPL, 0, Resources.NEWSUPPL.Length);
             fs.Close();
             fp.Show();
-            Table tNewSupp = new Table("SUPPLIER.DBF");
+            var tNewSupp = new Table("SUPPLIER.DBF");
             for (int i = 0; i < tOldSupp.NumberOfRecords; i++)
             {
                 fp.pb.Value = i;
                 string[] sOldRec = tOldSupp.GetRecordFrom(i);
-                string[] sNewRec = new string[sOldRec.Length + 1];
+                var sNewRec = new string[sOldRec.Length + 1];
                 for (int x = 0; x < sOldRec.Length; x++)
                 {
                     sNewRec[x] = sOldRec[x];
@@ -9428,11 +9004,11 @@ namespace BackOffice
             }
             if (nTillPos == -1)
                 throw new NotSupportedException("Unknown Till Number");
-            System.Windows.Forms.Form fWaiting = new System.Windows.Forms.Form();
+            var fWaiting = new Form();
             fWaiting.Size = new Size(200, 70);
-            fWaiting.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
-            fWaiting.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            System.Windows.Forms.Label lblWaiting = new System.Windows.Forms.Label();
+            fWaiting.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            fWaiting.StartPosition = FormStartPosition.CenterScreen;
+            var lblWaiting = new Label();
             lblWaiting.Location = new Point(10, 10);
             lblWaiting.AutoSize = true;
             lblWaiting.Font = new Font("Franklin Gothic Medium", 12.0f);
@@ -9443,14 +9019,15 @@ namespace BackOffice
             int nOfTries = 0;
             while (!File.Exists(Till[nTillPos].FileLocation + "\\TILL\\dumped"))
             {
-                System.Threading.Thread.Sleep(1000);
+                Thread.Sleep(1000);
                 nOfTries++;
                 lblWaiting.Text += ".";
                 fWaiting.Refresh();
-                System.Windows.Forms.Application.DoEvents();
+                Application.DoEvents();
                 if (nOfTries > 10)
                 {
-                    if (System.Windows.Forms.MessageBox.Show("Timed out. Continue waiting?", "Timed out", System.Windows.Forms.MessageBoxButtons.YesNo) == System.Windows.Forms.DialogResult.No)
+                    if (MessageBox.Show("Timed out. Continue waiting?", "Timed out", MessageBoxButtons.YesNo) ==
+                        DialogResult.No)
                     {
                         throw new TimeoutException("Timed out whilst waiting for the till to dump the transaction");
                     }
@@ -9460,7 +9037,7 @@ namespace BackOffice
                     }
                 }
             }
-            System.Threading.Thread.Sleep(7000);
+            Thread.Sleep(7000);
             TextReader tReader = new StreamReader(Till[nTillPos].FileLocation + "\\TILL\\output.txt");
             string[] sToReturn = tReader.ReadToEnd().Split('\n');
             tReader.Close();
@@ -9481,14 +9058,14 @@ namespace BackOffice
                 int nReturned = Convert.ToInt32(tOffers.GetRecordFrom(nRecLoc)[5]);
                 tOffers.DeleteRecord(nRecLoc);
             }
-            string[] sToAdd = { sOfferCode, sDesc, sTypeSixBarcode, sReceiptLoc, "0", "0" };
+            string[] sToAdd = {sOfferCode, sDesc, sTypeSixBarcode, sReceiptLoc, "0", "0"};
             tOffers.AddRecord(sToAdd);
             tOffers.SaveToFile("OFFERS.DBF");
         }
 
         public string[] GetListOfOfferNumbers()
         {
-            string[] sList = new string[tOffers.NumberOfRecords];
+            var sList = new string[tOffers.NumberOfRecords];
             for (int i = 0; i < sList.Length; i++)
             {
                 sList[i] = tOffers.GetRecordFrom(i)[0];
@@ -9535,15 +9112,15 @@ namespace BackOffice
             SendCommandToTill("TempCloseSoftware");
             while (!File.Exists(Till[0].FileLocation + "\\TILL\\done"))
             {
-                System.Threading.Thread.Sleep(500);
+                Thread.Sleep(500);
             }
-            System.Diagnostics.Process p = new System.Diagnostics.Process();
+            var p = new Process();
             p.StartInfo.FileName = Till[0].FileLocation + "\\TILL\\GTill.exe";
             p.StartInfo.WorkingDirectory = Till[0].FileLocation + "\\TILL";
             p.Start();
             while (!p.HasExited)
             {
-                System.Threading.Thread.Sleep(500);
+                Thread.Sleep(500);
             }
             TextWriter tWriter = new StreamWriter(Till[0].FileLocation + "\\TILL\\alsodone");
             tWriter.WriteLine("");
@@ -9552,7 +9129,7 @@ namespace BackOffice
 
         private void CollectOffers(string sTillLoc)
         {
-            Table tTillOffers = new Table(sTillLoc + "\\TILL\\OFFERS.DBF");
+            var tTillOffers = new Table(sTillLoc + "\\TILL\\OFFERS.DBF");
             for (int i = 0; i < tTillOffers.NumberOfRecords; i++)
             {
                 int nPrinted = Convert.ToInt32(tTillOffers.GetRecordFrom(i)[4]);
@@ -9578,7 +9155,7 @@ namespace BackOffice
 
         public void BuildSalesIndex()
         {
-            frmProgressBar fp = new frmProgressBar("Deleting Previous Index");
+            var fp = new frmProgressBar("Deleting Previous Index");
             fp.Show();
             string[] sFoldersToIndex = Directory.GetDirectories("Archive\\Weekly");
             fp.pb.Maximum = sFoldersToIndex.Length;
@@ -9586,8 +9163,8 @@ namespace BackOffice
             // Hopefully this will work
             //FileManagementEngine.UncompressDirectory(sTDir);
 
-            FileStream s = new FileStream(sTDir + "SALESIND.DBF", FileMode.Create);
-            s.Write(Properties.Resources.SALESIND, 0, Properties.Resources.SALESIND.Length);
+            var s = new FileStream(sTDir + "SALESIND.DBF", FileMode.Create);
+            s.Write(Resources.SALESIND, 0, Resources.SALESIND.Length);
             s.Close();
 
             tSalesIndex = new Table("SALESIND.DBF");
@@ -9597,9 +9174,8 @@ namespace BackOffice
                 {
                     // Hopefully this will work
                     FileManagementEngine.UncompressDirectory(sFoldersToIndex[i]);
-
                 }
-                catch (Ionic.Zip.BadReadException)
+                catch (BadReadException)
                 {
                     // One of the compressed files is dodgy, delete it
                     Directory.Delete(sFoldersToIndex[i], true);
@@ -9609,13 +9185,13 @@ namespace BackOffice
                 string[] sFilesToAdd = Directory.GetFiles(sFoldersToIndex[i] + "\\TILL1\\INGNG", "TDATA*.DBF");
                 for (int x = 0; x < sFilesToAdd.Length; x++)
                 {
-                    Table tData = new Table(sFilesToAdd[x]);
+                    var tData = new Table(sFilesToAdd[x]);
                     for (int y = 0; y < tData.NumberOfRecords; y++)
                     {
                         string sBarcode = tData.GetRecordFrom(y)[3];
                         string sTranNo = tData.GetRecordFrom(y)[0];
                         string sWeek = sFoldersToIndex[i].Split('\\')[sFoldersToIndex[i].Split('\\').Length - 1];
-                        string[] sToAdd = { sTranNo, sBarcode, sWeek };
+                        string[] sToAdd = {sTranNo, sBarcode, sWeek};
                         tSalesIndex.AddRecord(sToAdd);
                     }
                 }
@@ -9631,14 +9207,13 @@ namespace BackOffice
             int n = 0;
             string[,] sResults = tSalesIndex.SearchAndGetAllMatchingRecords(1, sBarcode, ref n, true);
             sTranNos = new string[n];
-            string[] sSaleDate = new string[n];
+            var sSaleDate = new string[n];
             for (int i = 0; i < n; i++)
             {
                 sTranNos[i] = sResults[i, 0];
                 sSaleDate[i] = sResults[i, 2];
             }
             return sSaleDate;
-
         }
 
         public string WorkOutDateOfSale(string sTranNum, string sFolder)
@@ -9652,7 +9227,7 @@ namespace BackOffice
                 for (int i = 0; i < sTDATAFiles.Length; i++)
                 {
                     int n = 0;
-                    Table t = new Table(sTDATAFiles[i]);
+                    var t = new Table(sTDATAFiles[i]);
                     if (t.SearchForRecord(sTranNum, 0, ref n))
                     {
                         return sTDATAFiles[i].Split('\\')[sTDATAFiles[i].Split('\\').Length - 1][5].ToString();
@@ -9692,11 +9267,9 @@ namespace BackOffice
             return dQtyToOrder;
         }
 
-        string[] lastMissingOrderLine = new string[0];
-
         public string[] FindMissingOrderLines()
         {
-            List<string> missingOrderLines = new List<string>();
+            var missingOrderLines = new List<string>();
 
             int fieldNum = 0;
             for (int i = 0; i < tOrderLine.NumberOfRecords; i++)
@@ -9713,7 +9286,8 @@ namespace BackOffice
             }
 
             if (lastMissingOrderLine.Length > 0 && lastMissingOrderLine.Length < missingOrderLines.Count)
-                throw new Exception("Order numbers have just been corrupted!!!! Please do a full upload and include a description of what you were doing at the time.");
+                throw new Exception(
+                    "Order numbers have just been corrupted!!!! Please do a full upload and include a description of what you were doing at the time.");
 
             lastMissingOrderLine = missingOrderLines.ToArray();
             return lastMissingOrderLine;
@@ -9782,10 +9356,10 @@ namespace BackOffice
             try
             {
                 FileManagementEngine.UncompressDirectory(archiveFolder);
-                Table tbStock = new Table(archiveFolder + "\\MAINSTOC.DBF");
-                Table tbStockSta = new Table(archiveFolder + "\\STOCKSTA.DBF");
+                var tbStock = new Table(archiveFolder + "\\MAINSTOC.DBF");
+                var tbStockSta = new Table(archiveFolder + "\\STOCKSTA.DBF");
 
-                newItems = this.tStockStats.NumberOfRecords - tbStockSta.NumberOfRecords;
+                newItems = tStockStats.NumberOfRecords - tbStockSta.NumberOfRecords;
 
                 for (int i = 0; i < tbStock.NumberOfRecords; i++)
                 {
@@ -9845,10 +9419,5 @@ namespace BackOffice
         }
 
         #endregion
-
-
     }
-
-
-
 }
