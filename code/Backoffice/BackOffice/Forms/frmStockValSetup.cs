@@ -40,7 +40,7 @@ namespace BackOffice
         {
             if (e.KeyCode == Keys.F5)
             {
-                frmReportDates frd = new frmReportDates(StockEngine.Period.Monthly);
+                frmReportDates frd = new frmReportDates(Period.Monthly);
                 frd.ShowDialog();
                 if (frd.SelectedFolder != "$NONE")
                 {

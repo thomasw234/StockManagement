@@ -31,7 +31,7 @@ namespace BackOffice
             {
                 if (SkipSettings == "")
                     SkipSettings = "S";
-                this.CreateReport(StockEngine.ReportOrderedBy.DescAlphabetical, true, SkipSettings);
+                this.CreateReport(ReportOrderedBy.DescAlphabetical, true, SkipSettings);
                 SkipSettings = "N";
             }
         }
@@ -54,7 +54,7 @@ namespace BackOffice
             InputTextBox("SORP").SelectAll();
         }
 
-        private void CreateReport(StockEngine.ReportOrderedBy sOrder, bool includeZeroItems, string output)
+        private void CreateReport(ReportOrderedBy sOrder, bool includeZeroItems, string output)
         {
             if (!bUsingCatGroups)
             {
@@ -66,7 +66,7 @@ namespace BackOffice
                 else if (string.Equals(output, "S", StringComparison.OrdinalIgnoreCase))
                 {
                     sEngine.StockReportToFile(sCats, sOrder, "", includeZeroItems);
-                    frmReportViewer fViewer = new frmReportViewer(StockEngine.ReportType.StockLevelReport);
+                    frmReportViewer fViewer = new frmReportViewer(ReportType.StockLevelReport);
                     fViewer.ShowDialog();
                 }
             }
@@ -80,7 +80,7 @@ namespace BackOffice
                 else if (string.Equals(output, "S", StringComparison.OrdinalIgnoreCase))
                 {
                     sEngine.StockReportToFile(sCats, sOrder, InputTextBox("CAT").Text, includeZeroItems);
-                    frmReportViewer fViewer = new frmReportViewer(StockEngine.ReportType.StockLevelReport);
+                    frmReportViewer fViewer = new frmReportViewer(ReportType.StockLevelReport);
                     fViewer.ShowDialog();
                 }
             }
@@ -91,7 +91,7 @@ namespace BackOffice
         {
             if (e.KeyCode == Keys.Enter)
             {
-                StockEngine.ReportOrderedBy sOrder;
+                ReportOrderedBy sOrder;
                 frmStockReportOrder fOrder = new frmStockReportOrder();
                 fOrder.ShowDialog();
                 if (fOrder.OptionSelected)

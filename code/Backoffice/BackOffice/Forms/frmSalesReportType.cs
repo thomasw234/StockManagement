@@ -10,7 +10,7 @@ namespace BackOffice
     class frmSalesReportType : ScalableForm
     {
         CListBox lbOptions;
-        public StockEngine.SalesReportType sType;
+        public SalesReportType sType;
         public bool OptionSelected = false;
 
         public frmSalesReportType()
@@ -37,10 +37,10 @@ namespace BackOffice
                 switch (lbOptions.SelectedIndex)
                 {
                     case 0:
-                        sType = StockEngine.SalesReportType.AllStock;
+                        sType = SalesReportType.AllStock;
                         break;
                     case 1:
-                        sType = StockEngine.SalesReportType.CatTotalsAllShops;
+                        sType = SalesReportType.CatTotalsAllShops;
                         break;
                 }
                 OptionSelected = true;

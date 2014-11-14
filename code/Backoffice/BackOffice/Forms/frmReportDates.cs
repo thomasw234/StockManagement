@@ -14,7 +14,7 @@ namespace BackOffice
         public string SelectedFolder = "$NONE";
         string[] sDirs;
 
-        public frmReportDates(StockEngine.Period pPeriod)
+        public frmReportDates(Period pPeriod)
         {
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.Size = new Size(200, 500);
@@ -29,16 +29,16 @@ namespace BackOffice
             string sPeriod = "";
             switch (pPeriod)
             {
-                case StockEngine.Period.Daily:
+                case Period.Daily:
                     sPeriod = "Daily";
                     break;
-                case StockEngine.Period.Monthly:
+                case Period.Monthly:
                     sPeriod = "Monthly";
                     break;
-                case StockEngine.Period.Weekly:
+                case Period.Weekly:
                     sPeriod = "Weekly";
                     break;
-                case StockEngine.Period.Yearly:
+                case Period.Yearly:
                     sPeriod = "Yearly";
                     break;
             }

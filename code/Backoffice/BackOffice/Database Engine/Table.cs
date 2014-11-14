@@ -67,6 +67,11 @@ namespace BackOffice.Database_Engine
             // Removed for experiment
             // LoadTable()
             this.dBaseFileName = dBaseFileName;
+
+            if (!File.Exists(dBaseFileName))
+            {
+                throw new FileNotFoundException("The database file " + dBaseFileName + " could not be found");
+            }
         }
 
         public void ProperLoad()

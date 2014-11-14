@@ -6,5 +6,5 @@ using System.Threading.Tasks;
 
 namespace BackOffice
 {
-    enum Period { Daily, Weekly, Monthly, Yearly, Other };
+    public enum Period { Daily, Weekly, Monthly, Yearly, Other };
 }

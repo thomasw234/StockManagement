@@ -8,7 +8,7 @@ namespace BackOffice.Forms
 {
     class frmOutOfStockReportOrder : ScalableForm
     {
-        public StockEngine.SortOrder sortOrder;
+        public SortOrder sortOrder;
         public bool chosen = false;
 
         public frmOutOfStockReportOrder()
@@ -52,19 +52,19 @@ namespace BackOffice.Forms
         {
             if (((ListBox)sender).SelectedIndex == 0)
             {
-                this.sortOrder = StockEngine.SortOrder.Barcode;
+                this.sortOrder = SortOrder.Barcode;
             }
             else if (((ListBox)sender).SelectedIndex == 1)
             {
-                this.sortOrder = StockEngine.SortOrder.AvgSales;
+                this.sortOrder = SortOrder.AvgSales;
             }
             else if (((ListBox)sender).SelectedIndex == 2)
             {
-                this.sortOrder = StockEngine.SortOrder.OutOfStock;
+                this.sortOrder = SortOrder.OutOfStock;
             }
             else
             {
-                this.sortOrder = StockEngine.SortOrder.QIS;
+                this.sortOrder = SortOrder.QIS;
             }
         }
 

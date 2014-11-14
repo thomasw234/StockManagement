@@ -11,7 +11,7 @@ namespace BackOffice
         string[] stockStaRecord;
         string[] mainStockRecord;
         string[] stockLengthRecord;
-        StockEngine.SortOrder sortOrder;
+        SortOrder sortOrder;
 
         public OutOfStockReportItem(string[] stockStaRecord, string[] mainStockRecord, string[] stockLengthRecord)
         {
@@ -20,7 +20,7 @@ namespace BackOffice
             this.stockLengthRecord = stockLengthRecord;
         }
 
-        public StockEngine.SortOrder SortOrder
+        public SortOrder SortOrder
         {
             get
             {
@@ -81,16 +81,16 @@ namespace BackOffice
             OutOfStockReportItem iItem = (OutOfStockReportItem)obj;
             switch (this.sortOrder)
             {
-                case StockEngine.SortOrder.Barcode:
+                case SortOrder.Barcode:
                     return String.Compare(iItem.Barcode, this.Barcode);
                     break;
-                case StockEngine.SortOrder.AvgSales:
+                case SortOrder.AvgSales:
                     return Decimal.Compare(iItem.AverageSales, this.AverageSales);
                     break;
-                case StockEngine.SortOrder.OutOfStock:
+                case SortOrder.OutOfStock:
                     return Decimal.Compare(iItem.PercentageOutOfStock, this.PercentageOutOfStock);
                     break;
-                case StockEngine.SortOrder.QIS:
+                case SortOrder.QIS:
                     return Decimal.Compare(iItem.QIS, this.QIS);
                     break;
             }

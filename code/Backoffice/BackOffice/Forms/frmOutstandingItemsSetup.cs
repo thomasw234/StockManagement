@@ -42,7 +42,7 @@ namespace BackOffice
                 else if (printerOptions.Equals("S", StringComparison.OrdinalIgnoreCase))
                 {
                     sEngine.OutStandingItemsToFile(supcode);
-                    frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.OutStandingItems);
+                    frmReportViewer frv = new frmReportViewer(ReportType.OutStandingItems);
                     frv.ShowDialog();
                 }
 
@@ -71,7 +71,7 @@ namespace BackOffice
                 else
                 {
                     sEngine.OutStandingItemsToFile(InputTextBox("SUPCODE").Text.ToUpper());
-                    frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.OutStandingItems);
+                    frmReportViewer frv = new frmReportViewer(ReportType.OutStandingItems);
                     frv.ShowDialog();
                 }
                 this.Close();

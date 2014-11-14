@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using BackOffice.Database_Engine;
+using BackOffice.Exceptions;
 using BackOffice.Properties;
 using Ionic.Zip;
 
@@ -1139,7 +1140,12 @@ namespace BackOffice
 
         public string[] GetMainStockInfo(string sBarcode)
         {
-            return tStock.GetRecordFrom(sBarcode, 0, true);
+            var result = tStock.GetRecordFrom(sBarcode, 0, true);
+            /*if (result.Length <= 1)
+            {
+                throw new ItemNotFoundInDatabaseException(sBarcode);
+            }*/
+            return result;
         }
 
         public decimal GetVATRateFromCode(string sCode)
@@ -1191,7 +1197,7 @@ namespace BackOffice
             if (nRecNum != -1)
                 return tStockStats.GetRecordFrom(nRecNum);
             else
-                return new string[1];
+                throw new ItemNotFoundInDatabaseException(sBarcode);
         }
 
         // Taken from GTill
@@ -1272,6 +1278,10 @@ namespace BackOffice
         public decimal GetItemStockLevel(string sBarcode)
         {
             string[] sInfo = tStockStats.GetRecordFrom(sBarcode, 0, true);
+            if (sInfo.Length <= 1)
+            {
+                throw new ItemNotFoundInDatabaseException(sBarcode);
+            }
             decimal nToReturn = -1024;
             if (sInfo[0] != null && sInfo[36] != "")
                 nToReturn = Convert.ToDecimal(sInfo[36].TrimStart(' ').Replace(".00", ""));

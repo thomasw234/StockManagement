@@ -56,29 +56,29 @@ namespace BackOffice.Forms
         /// <summary>
         /// Get the period that was chosen
         /// </summary>
-        public StockEngine.Period ChosenPeriod
+        public Period ChosenPeriod
         {
             get
             {
                 switch (lbPeriods.SelectedIndex)
                 {
                     case 0:
-                        return StockEngine.Period.Daily;
+                        return Period.Daily;
                         break;
                     case 1:
-                        return StockEngine.Period.Weekly;
+                        return Period.Weekly;
                         break;
                     case 2:
-                        return StockEngine.Period.Monthly;
+                        return Period.Monthly;
                         break;
                     case 3:
-                        return StockEngine.Period.Yearly;
+                        return Period.Yearly;
                         break;
                     case 4:
-                        return StockEngine.Period.Other;
+                        return Period.Other;
                         break;
                 }
-                return StockEngine.Period.Other;
+                return Period.Other;
             }
         }
 
@@ -119,22 +119,22 @@ namespace BackOffice.Forms
             DateTime dt = DateTime.Now;
             switch (this.ChosenPeriod)
             {
-                case StockEngine.Period.Daily:
+                case Period.Daily:
                     dt = dt.AddDays(-1);
                     break;
-                case StockEngine.Period.Weekly:
+                case Period.Weekly:
                     dt = dt.AddDays(-7);
                     // Roll back until the start of the previous week
                     while (dt.DayOfWeek != DayOfWeek.Monday)
                         dt = dt.AddDays(-1);
                     break;
-                case StockEngine.Period.Monthly:
+                case Period.Monthly:
                     dt = dt.AddMonths(-1);
                     // Roll back until the start of the previous month
                     while (dt.Day != 1)
                         dt = dt.AddDays(-1);
                     break;
-                case StockEngine.Period.Yearly:
+                case Period.Yearly:
                 // No need to actually go to last year, more like Year To Date    
                 // dt = dt.AddYears(-1);
                     // Roll back until the start of the previous year
@@ -156,16 +156,16 @@ namespace BackOffice.Forms
             DateTime dt = getStartPeriodDateAsDT();
             switch (this.ChosenPeriod)
             {
-                case StockEngine.Period.Daily:
+                case Period.Daily:
                     dt = dt.AddDays(1);
                     break;
-                case StockEngine.Period.Weekly:
+                case Period.Weekly:
                     dt = dt.AddDays(7);
                     break;
-                case StockEngine.Period.Monthly:
+                case Period.Monthly:
                     dt = dt.AddMonths(1);
                     break;
-                case StockEngine.Period.Yearly:
+                case Period.Yearly:
                     dt = DateTime.Now; // Because it's Year To Date really
                     break;
             }

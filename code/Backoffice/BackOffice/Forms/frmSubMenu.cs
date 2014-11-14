@@ -393,28 +393,28 @@ namespace BackOffice
                     {
                         case 0:
                             // Daily Sales Report
-                            frmReportSelect fDailyViewer = new frmReportSelect(StockEngine.Period.Daily, ref sEngine);
+                            frmReportSelect fDailyViewer = new frmReportSelect(Period.Daily, ref sEngine);
                             if (this.shortcutString != null)
                                 fDailyViewer.skipSettings = shortcutString;
                             fDailyViewer.ShowDialog();
                             break;
                         case 1:
                             // Weekly Sales Report
-                            frmReportSelect fWeekViewer = new frmReportSelect(StockEngine.Period.Weekly, ref sEngine);
+                            frmReportSelect fWeekViewer = new frmReportSelect(Period.Weekly, ref sEngine);
                             if (this.shortcutString != null)
                                 fWeekViewer.skipSettings = shortcutString;
                             fWeekViewer.ShowDialog();
                             break;
                         case 2:
                             // Monthly Sales Report
-                            frmReportSelect fMonthViewer = new frmReportSelect(StockEngine.Period.Monthly, ref sEngine);
+                            frmReportSelect fMonthViewer = new frmReportSelect(Period.Monthly, ref sEngine);
                             if (this.shortcutString != null)
                                 fMonthViewer.skipSettings = this.shortcutString;
                             fMonthViewer.ShowDialog();
                             break;
                         case 3:
                             // YTD Sales Report
-                            frmReportSelect fYearViewer = new frmReportSelect(StockEngine.Period.Yearly, ref sEngine);
+                            frmReportSelect fYearViewer = new frmReportSelect(Period.Yearly, ref sEngine);
                             if (this.shortcutString != null)
                                 fYearViewer.skipSettings = this.shortcutString;
                             fYearViewer.ShowDialog();
@@ -449,7 +449,7 @@ namespace BackOffice
                                             else if (fGetSorP.Response.ToUpper() == "S")
                                             {
                                                 sEngine.ComissionReportToFile(floc.Commissioner, fGetStartDate.Response, fGetEndDate.Response, bArtistPresent);
-                                                frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.ComissionReport);
+                                                frmReportViewer frv = new frmReportViewer(ReportType.ComissionReport);
                                                 frv.ShowDialog();
                                             }
                                         }
@@ -471,7 +471,7 @@ namespace BackOffice
                                     if (fcp.Chosen)
                                     {
                                         string startDate = "", endDate = "";
-                                        if (fcp.ChosenPeriod != StockEngine.Period.Other)
+                                        if (fcp.ChosenPeriod != Period.Other)
                                         {
                                             startDate = fcp.getStartPeriodDate();
                                             endDate = fcp.getEndDate();
@@ -508,7 +508,7 @@ namespace BackOffice
                                             else if (fGetSorP.Response.ToUpper() == "S")
                                             {
                                                 sEngine.ComissionReportToFile(floc.Commissioner, startDate, endDate, bArtistPresent);
-                                                frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.ComissionReport);
+                                                frmReportViewer frv = new frmReportViewer(ReportType.ComissionReport);
                                                 frv.ShowDialog();
                                             }
                                         }
@@ -530,7 +530,7 @@ namespace BackOffice
                                 if (fcp.Chosen)
                                 {
                                     string startDate = "", endDate = "";
-                                    if (fcp.ChosenPeriod != StockEngine.Period.Other)
+                                    if (fcp.ChosenPeriod != Period.Other)
                                     {
                                         startDate = fcp.getStartPeriodDate();
                                         endDate = fcp.getEndDate();
@@ -562,7 +562,7 @@ namespace BackOffice
                                         else if (fGetScrorP.Response.ToUpper() == "S")
                                         {
                                             sEngine.CommissionSummaryReportToFile(startDate, endDate);
-                                            frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.CommissionSummaryReport);
+                                            frmReportViewer frv = new frmReportViewer(ReportType.CommissionSummaryReport);
                                             frv.ShowDialog();
                                         }
                                     }
@@ -622,13 +622,13 @@ namespace BackOffice
                                     string printer = shortcutString[shortcutString.Length - 1].ToString();
                                     if (printer.Equals("S", StringComparison.OrdinalIgnoreCase))
                                     {
-                                        sEngine.OutOfStockReportToFile(category, flos.SelectedShopCode, StockEngine.SortOrder.Barcode);
-                                        frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.OutOfStockLengthReport); ;
+                                        sEngine.OutOfStockReportToFile(category, flos.SelectedShopCode, SortOrder.Barcode);
+                                        frmReportViewer frv = new frmReportViewer(ReportType.OutOfStockLengthReport); ;
                                         frv.ShowDialog();
                                     }
                                     else if (printer.Equals("P", StringComparison.OrdinalIgnoreCase))
                                     {
-                                        sEngine.OutOfStockReportToPrinter(category, flos.SelectedShopCode, StockEngine.SortOrder.Barcode);
+                                        sEngine.OutOfStockReportToPrinter(category, flos.SelectedShopCode, SortOrder.Barcode);
                                     }
                                 }
                                 else
@@ -647,7 +647,7 @@ namespace BackOffice
                                         if (fSOrP.Response.ToUpper() == "S")
                                         {
                                             sEngine.OutOfStockReportToFile(fCatSelect.SelectedItemCategory, flos.SelectedShopCode, fOrder.sortOrder);
-                                            frmReportViewer frv = new frmReportViewer(StockEngine.ReportType.OutOfStockLengthReport); ;
+                                            frmReportViewer frv = new frmReportViewer(ReportType.OutOfStockLengthReport); ;
                                             frv.ShowDialog();
                                         }
                                         else if (fSOrP.Response.ToUpper() == "P")
@@ -1094,16 +1094,16 @@ namespace BackOffice
                     switch (lbMenuChoices.SelectedIndex)
                     {
                         case 0:
-                            sEngine.EndOfPeriod(StockEngine.Period.Daily);
+                            sEngine.EndOfPeriod(Period.Daily);
                             break;
                         case 1:
-                            sEngine.EndOfPeriod(StockEngine.Period.Weekly);
+                            sEngine.EndOfPeriod(Period.Weekly);
                             break;
                         case 2:
-                            sEngine.EndOfPeriod(StockEngine.Period.Monthly);
+                            sEngine.EndOfPeriod(Period.Monthly);
                             break;
                         case 3:
-                            sEngine.EndOfPeriod(StockEngine.Period.Yearly);
+                            sEngine.EndOfPeriod(Period.Yearly);
                             break;
                     }
                     this.Close();

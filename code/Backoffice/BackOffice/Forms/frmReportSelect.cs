@@ -11,11 +11,11 @@ namespace BackOffice
     class frmReportSelect : ScalableForm
     {
         StockEngine sEngine;
-        StockEngine.Period rtSelectedReport;
+        Period rtSelectedReport;
         Button bGo;
         public string skipSettings = "N";
 
-        public frmReportSelect(StockEngine.Period rType, ref StockEngine se)
+        public frmReportSelect(Period rType, ref StockEngine se)
         {
             sEngine = se;
             rtSelectedReport = rType;
@@ -30,7 +30,7 @@ namespace BackOffice
         {
             if (skipSettings != "N")
             {
-                this.CreateReport(StockEngine.SalesReportType.AllStock, StockEngine.ReportOrderedBy.CodeAlphabetical, skipSettings);
+                this.CreateReport(SalesReportType.AllStock, ReportOrderedBy.CodeAlphabetical, skipSettings);
                 skipSettings = "N";
             }
         }
@@ -145,7 +145,7 @@ namespace BackOffice
                 InputTextBox("SORP").Text = "";
         }
 
-        private void CreateReport(StockEngine.SalesReportType sType, StockEngine.ReportOrderedBy rOrder, string output)
+        private void CreateReport(SalesReportType sType, ReportOrderedBy rOrder, string output)
         {
             // Do Report
             if (output.Equals("S", StringComparison.OrdinalIgnoreCase))
@@ -157,24 +157,24 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sOldEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
                             break;
                     }
-                    frmReportViewer fViewer = new frmReportViewer(StockEngine.ReportType.SalesReport);
+                    frmReportViewer fViewer = new frmReportViewer(ReportType.SalesReport);
                     fViewer.ShowDialog();
                     this.Close();
                 }
@@ -184,24 +184,24 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
                             break;
                     }
-                    frmReportViewer fViewer = new frmReportViewer(StockEngine.ReportType.SalesReport);
+                    frmReportViewer fViewer = new frmReportViewer(ReportType.SalesReport);
                     fViewer.ShowDialog();
                     this.Close();
                 }
@@ -215,18 +215,18 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sOldEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
@@ -241,18 +241,18 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
@@ -272,18 +272,18 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sOldEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
@@ -297,18 +297,18 @@ namespace BackOffice
                     string sTitle = "";
                     switch (rtSelectedReport)
                     {
-                        case StockEngine.Period.Daily:
+                        case Period.Daily:
                             string sDate = sEngine.GetLastCollectionDate();
                             string sTitleDate = sDate[0].ToString() + sDate[1].ToString() + "/" + sDate[2].ToString() + sDate[3].ToString() + "/" + sDate[4].ToString() + sDate[5].ToString();
                             sTitle = "Daily Sales Report for " + sTitleDate;
                             break;
-                        case StockEngine.Period.Weekly:
+                        case Period.Weekly:
                             sTitle = "Weekly Sales Report for Week Commencing " + sEngine.GetWeekCommencingDate();
                             break;
-                        case StockEngine.Period.Monthly:
+                        case Period.Monthly:
                             sTitle = "Monthly Sales Report for " + sEngine.GetMonthDate();
                             break;
-                        case StockEngine.Period.Yearly:
+                        case Period.Yearly:
                             string sLastCollection = sEngine.GetLastCollectionDate();
                             string sYear = sLastCollection[4].ToString() + sLastCollection[5].ToString();
                             sTitle = "Yearly Sales Report for " + "20" + sYear;
@@ -329,10 +329,10 @@ namespace BackOffice
                 InputTextBox("SORP").Focus();
                 return;
             }
-            StockEngine.SalesReportType sType = fType.sType;
+            SalesReportType sType = fType.sType;
             // Get Order
-            StockEngine.ReportOrderedBy rOrder = StockEngine.ReportOrderedBy.DescAlphabetical;
-            if (sType == StockEngine.SalesReportType.AllStock)
+            ReportOrderedBy rOrder = ReportOrderedBy.DescAlphabetical;
+            if (sType == SalesReportType.AllStock)
             {
                 frmSalesReportOrder fOrder = new frmSalesReportOrder();
                 fOrder.ShowDialog();

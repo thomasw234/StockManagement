@@ -77,6 +77,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Exceptions\ItemNotFoundInDatabaseException.cs" />
     <Compile Include="Period.cs" />
     <Compile Include="CommissionReportItem.cs" />
     <Compile Include="Database Engine\FastIndex.cs" />
@@ -468,9 +469,7 @@
     <None Include="Resources\COMMPPL.DBF" />
     <None Include="Resources\STOCKLEN.DBF" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Exceptions\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
       <Visible>False</Visible>

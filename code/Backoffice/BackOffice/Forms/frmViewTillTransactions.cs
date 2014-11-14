@@ -139,7 +139,7 @@ namespace BackOffice
             else if (e.KeyCode == Keys.F5)
             {
                 // Change Date
-                frmReportDates frd = new frmReportDates(StockEngine.Period.Weekly);
+                frmReportDates frd = new frmReportDates(Period.Weekly);
                 frd.ShowDialog();
                 if (frd.SelectedFolder != "$NONE")
                 {

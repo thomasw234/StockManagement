@@ -10,7 +10,7 @@ namespace BackOffice
     class frmSalesReportOrder : ScalableForm
     {
         CListBox lbOptions;
-        public StockEngine.ReportOrderedBy SelectedOrder;
+        public ReportOrderedBy SelectedOrder;
         public bool OptionSelected = false;
 
         public frmSalesReportOrder()
@@ -42,25 +42,25 @@ namespace BackOffice
                 switch (lbOptions.SelectedIndex)
                 {
                     case 0:
-                        SelectedOrder = StockEngine.ReportOrderedBy.DescAlphabetical;
+                        SelectedOrder = ReportOrderedBy.DescAlphabetical;
                         break;
                     case 1:
-                        SelectedOrder = StockEngine.ReportOrderedBy.QuantitySold;
+                        SelectedOrder = ReportOrderedBy.QuantitySold;
                         break;
                     case 2:
-                        SelectedOrder = StockEngine.ReportOrderedBy.CodeAlphabetical;
+                        SelectedOrder = ReportOrderedBy.CodeAlphabetical;
                         break;
                     case 3:
-                        SelectedOrder = StockEngine.ReportOrderedBy.GrossSales;
+                        SelectedOrder = ReportOrderedBy.GrossSales;
                         break;
                     case 4:
-                        SelectedOrder = StockEngine.ReportOrderedBy.NetSales;
+                        SelectedOrder = ReportOrderedBy.NetSales;
                         break;
                     case 5:
-                        SelectedOrder = StockEngine.ReportOrderedBy.Profit;
+                        SelectedOrder = ReportOrderedBy.Profit;
                         break;
                     case 6:
-                        SelectedOrder = StockEngine.ReportOrderedBy.ProfitPercent;
+                        SelectedOrder = ReportOrderedBy.ProfitPercent;
                         break;
                 }
                 OptionSelected = true;

@@ -441,20 +441,20 @@ namespace BackOffice
         {
             if (e.Shift && e.KeyCode == Keys.P && sSearchTerm != "TYPE:4")
             {
-                StockEngine.ReportOrderedBy seOrder = StockEngine.ReportOrderedBy.CodeAlphabetical;
+                ReportOrderedBy seOrder = ReportOrderedBy.CodeAlphabetical;
                 switch (sOrder)
                 {
                     case ParentItems.SortOrder.AlphabeticalCode:
-                        seOrder = StockEngine.ReportOrderedBy.CodeAlphabetical;
+                        seOrder = ReportOrderedBy.CodeAlphabetical;
                         break;
                     case ParentItems.SortOrder.AlphabeticalDesc:
-                        seOrder = StockEngine.ReportOrderedBy.DescAlphabetical;
+                        seOrder = ReportOrderedBy.DescAlphabetical;
                         break;
                     case ParentItems.SortOrder.GrossDesc:
-                        seOrder = StockEngine.ReportOrderedBy.RRP;
+                        seOrder = ReportOrderedBy.RRP;
                         break;
                     case ParentItems.SortOrder.QtyDesc:
-                        seOrder = StockEngine.ReportOrderedBy.QIS;
+                        seOrder = ReportOrderedBy.QIS;
                         break;
                 }
                 string[] sBarcodes = new string[iResults.Length];

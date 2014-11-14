@@ -22,26 +22,26 @@ namespace BackOffice
         int[] nLineTop;
         int[] nLineHeight;
 
-        StockEngine.ReportType rType;
-        public frmReportViewer(StockEngine.ReportType r)
+        ReportType rType;
+        public frmReportViewer(ReportType r)
         {
             rType = r;
-            if (rType == StockEngine.ReportType.StockLevelReport)
+            if (rType == ReportType.StockLevelReport)
             {
                 nTopLine = 6;
                 nBottomLine = 5;
             }
-            else if (rType == StockEngine.ReportType.ComissionReport)
+            else if (rType == ReportType.ComissionReport)
             {
                 nTopLine = 5;
                 nBottomLine = 4;
             }
-            else if (rType == StockEngine.ReportType.CommissionSummaryReport)
+            else if (rType == ReportType.CommissionSummaryReport)
             {
                 nTopLine = 4;
                 nBottomLine =3;
             }
-            else if (rType == StockEngine.ReportType.OutStandingItems)
+            else if (rType == ReportType.OutStandingItems)
             {
                 nTopLine = 6;
                 nBottomLine = 5;
@@ -59,7 +59,7 @@ namespace BackOffice
             while (nLineSelected != sReport.Length && sReport[nLineSelected].StartsWith("-"))
                 nLineSelected++;
 
-            if (rType == StockEngine.ReportType.ComissionReport || rType == StockEngine.ReportType.CommissionSummaryReport)
+            if (rType == ReportType.ComissionReport || rType == ReportType.CommissionSummaryReport)
                 ReportTitle = sReport[0];
             tr.Close();
             DrawNextPageOfReport(true);
@@ -152,12 +152,12 @@ namespace BackOffice
                 nBottomLine -= nMaxLines;
                 if (nTopLine < 7)
                 {
-                    if (rType == StockEngine.ReportType.StockLevelReport)
+                    if (rType == ReportType.StockLevelReport)
                     {
                         nTopLine = 6;
                         nBottomLine = 5;
                     }
-                    else if (rType == StockEngine.ReportType.ComissionReport)
+                    else if (rType == ReportType.ComissionReport)
                     {
                         nTopLine = 5;
                         nBottomLine = 4;
@@ -182,11 +182,11 @@ namespace BackOffice
                     }
                     int nMaxTop = 0;
 
-                    if (rType == StockEngine.ReportType.StockLevelReport)
+                    if (rType == ReportType.StockLevelReport)
                     {
                         nMaxTop = 6;
                     }
-                    else if (rType == StockEngine.ReportType.ComissionReport)
+                    else if (rType == ReportType.ComissionReport)
                     {
                         nMaxTop = 5;
                     }
@@ -236,7 +236,7 @@ namespace BackOffice
             if (bIncrementPage)
                 nTopLine = nBottomLine + 1;
             int nBoxWidth = 0;
-            if (rType == StockEngine.ReportType.SalesReport)
+            if (rType == ReportType.SalesReport)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString("                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)", fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
@@ -247,7 +247,7 @@ namespace BackOffice
                 e.DrawString("                                             Level     Sold         Sales       Sales                            Profit (%)   Sales (%)", fFont, new SolidBrush(Color.Black), new PointF(10, nTop));
                 nTop += Convert.ToInt32(fFont.GetHeight()) * 2;
             }
-            else if (rType == StockEngine.ReportType.StockLevelReport)
+            else if (rType == ReportType.StockLevelReport)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString(sReport[4], fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
@@ -256,7 +256,7 @@ namespace BackOffice
                 e.DrawString(sReport[4], fFont, new SolidBrush(Color.Black), new PointF(10, nTop));
                 nTop += Convert.ToInt32(fFont.GetHeight() * 2);
             }
-            else if (rType == StockEngine.ReportType.ComissionReport)
+            else if (rType == ReportType.ComissionReport)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString(sReport[2], fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
@@ -265,7 +265,7 @@ namespace BackOffice
                 e.DrawString(sReport[3], fFont, new SolidBrush(Color.Black), new PointF(10, nTop));
                 nTop += Convert.ToInt32(fFont.GetHeight() * 2);
             }
-            else if (rType == StockEngine.ReportType.CommissionSummaryReport)
+            else if (rType == ReportType.CommissionSummaryReport)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString(sReport[1], fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
@@ -274,7 +274,7 @@ namespace BackOffice
                 e.DrawString(sReport[2], fFont, new SolidBrush(Color.Black), new PointF(10, nTop));
                 nTop += Convert.ToInt32(fFont.GetHeight() * 2);
             }
-            else if (rType == StockEngine.ReportType.OutStandingItems)
+            else if (rType == ReportType.OutStandingItems)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString(sReport[4], fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
@@ -283,7 +283,7 @@ namespace BackOffice
                 e.DrawString(sReport[4], fFont, new SolidBrush(Color.Black), new PointF(10, nTop));
                 nTop += Convert.ToInt32(fFont.GetHeight() * 2);
             }
-            else if (rType == StockEngine.ReportType.OutOfStockLengthReport)
+            else if (rType == ReportType.OutOfStockLengthReport)
             {
                 nBoxWidth = Convert.ToInt32(e.MeasureString(sReport[4], fFont).Width);
                 e.DrawString(ReportTitle, new Font("Arial", 14.0f), new SolidBrush(Color.Black), new PointF((nBoxWidth / 2) - Convert.ToInt32((e.MeasureString(ReportTitle, new Font("Arial", 14.0f)).Width / 2)), (float)nTop));
