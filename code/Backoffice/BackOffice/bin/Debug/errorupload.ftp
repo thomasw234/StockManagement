@@ -1,0 +1,8 @@
+backoffice@thomaswormald.co.uk
+Lords12345
+binary
+cd backoffice\crashlogs
+mkdir "05.02.2016 21.10.58"
+cd "05.02.2016 21.10.58"
+send "CrashLog\05.02.2016 21.10.58\files.zip
+bye

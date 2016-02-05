@@ -39,3 +39,13 @@ C:\Users\thomas.wormald\Documents\Visual Studio 2013\Projects\StockManagement\co
 C:\Users\thomas.wormald\Documents\Visual Studio 2013\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.csproj.GenerateResource.Cache
 C:\Users\thomas.wormald\Documents\Visual Studio 2013\Projects\StockManagement\code\Backoffice\BackOffice\bin\Debug\BackOffice.exe
 C:\Users\thomas.wormald\Documents\Visual Studio 2013\Projects\StockManagement\code\Backoffice\BackOffice\bin\Debug\BackOffice.pdb
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\bin\Debug\BackOffice.exe.config
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.exe
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.pdb
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\bin\Debug\BackOffice.exe
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\bin\Debug\BackOffice.pdb
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.frmErrorCatcher.resources
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.frmOffersReceptDesigner.resources
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.frmSearchForTransaction.resources
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.Properties.Resources.resources
+C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\obj\Debug\BackOffice.csproj.GenerateResource.Cache

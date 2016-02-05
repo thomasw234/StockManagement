@@ -33,7 +33,6 @@
             this.label2 = new System.Windows.Forms.Label();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.label3 = new System.Windows.Forms.Label();
-            this.button1 = new System.Windows.Forms.Button();
             this.button2 = new System.Windows.Forms.Button();
             this.button3 = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -56,7 +55,7 @@
             this.label2.Size = new System.Drawing.Size(776, 43);
             this.label2.TabIndex = 1;
             this.label2.Text = "Backoffice has crashed.  If you have 2 minutes to spare, please could you give a " +
-                "description of what you were doing at the time of the crash:";
+    "description of what you were doing at the time of the crash:";
             // 
             // textBox1
             // 
@@ -67,7 +66,7 @@
             this.textBox1.Size = new System.Drawing.Size(776, 154);
             this.textBox1.TabIndex = 2;
             this.textBox1.Text = "Enter any relevant information here, such as a barcode you may have been using, a" +
-                " category you were trying to view, a supplier you were trying to use, etc.";
+    " category you were trying to view, a supplier you were trying to use, etc.";
             // 
             // label3
             // 
@@ -78,23 +77,13 @@
             this.label3.TabIndex = 3;
             this.label3.Text = resources.GetString("label3.Text");
             // 
-            // button1
-            // 
-            this.button1.Location = new System.Drawing.Point(327, 329);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(304, 23);
-            this.button1.TabIndex = 4;
-            this.button1.Text = "Upload Report Only (Quicker, Data Not Uploaded Though)";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
-            // 
             // button2
             // 
             this.button2.Location = new System.Drawing.Point(637, 329);
             this.button2.Name = "button2";
             this.button2.Size = new System.Drawing.Size(158, 23);
             this.button2.TabIndex = 5;
-            this.button2.Text = "Upload Data For Analysis";
+            this.button2.Text = "OK";
             this.button2.UseVisualStyleBackColor = true;
             this.button2.Click += new System.EventHandler(this.button2_Click);
             // 
@@ -115,7 +104,6 @@
             this.ClientSize = new System.Drawing.Size(807, 364);
             this.Controls.Add(this.button3);
             this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.textBox1);
             this.Controls.Add(this.label2);
@@ -138,7 +126,6 @@
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Button button2;
         private System.Windows.Forms.Button button3;
     }

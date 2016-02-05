@@ -1,0 +1,13 @@
+05/02/2016 21:09:53
+System.NotSupportedException: Test crash
+   at BackOffice.frmSubMenu.lbMenuChoices_KeyDown(Object sender, KeyEventArgs e) in C:\Users\thoma\Documents\Visual Studio 2015\Projects\StockManagement\code\Backoffice\BackOffice\Forms\frmSubMenu.cs:line 1009
+   at System.Windows.Forms.KeyEventHandler.Invoke(Object sender, KeyEventArgs e)
+   at System.Windows.Forms.Control.OnKeyDown(KeyEventArgs e)
+   at System.Windows.Forms.Control.ProcessKeyEventArgs(Message& m)
+   at System.Windows.Forms.Control.WmKeyChar(Message& m)
+   at System.Windows.Forms.Control.WndProc(Message& m)
+   at System.Windows.Forms.ListBox.WndProc(Message& m)
+   at System.Windows.Forms.NativeWindow.Callback(IntPtr hWnd, Int32 msg, IntPtr wparam, IntPtr lparam)
+User said: Enter any relevant information here, such as a barcode you may have been using, a category you were trying to view, a supplier you were trying to use, etc.
+Additional Info: 
+This is some test information

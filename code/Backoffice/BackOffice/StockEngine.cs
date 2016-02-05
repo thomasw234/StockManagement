@@ -445,6 +445,12 @@ namespace BackOffice
 
         public void CheckForUpdate(bool bForced)
         {
+            // Hack to prevent update checking every day due to discontinued support
+            if (!bForced)
+            {
+                return;
+            }
+
             var r = new Random(); // Used to prevent caching!
             var fp = new frmProgressBar("Checking For Update");
             fp.pb.Maximum = 5;

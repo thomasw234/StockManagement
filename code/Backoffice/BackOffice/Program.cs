@@ -201,7 +201,8 @@ namespace BackOffice
                 tw.WriteLine("bye");
                 tw.Close();
 
-                System.Diagnostics.Process.Start("FTP", "-s:errorupload.ftp 94.136.40.75");
+                // Commented out due to discontinued support
+                /*System.Diagnostics.Process.Start("FTP", "-s:errorupload.ftp 94.136.40.75");
                 bool bRunning = true;
                 do
                 {
@@ -215,7 +216,7 @@ namespace BackOffice
                         }
                     }
                 } while (bRunning);
-                File.Delete("errorupload.ftp");
+                File.Delete("errorupload.ftp");*/
         }
 
 
